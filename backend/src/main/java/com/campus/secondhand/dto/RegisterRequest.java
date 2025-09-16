@@ -35,9 +35,5 @@ public class RegisterRequest {
     @Size(max = 20, message = "昵称长度不能超过20位")
     private String nickname;
 
-    /**
-     * 验证码
-     */
-    @NotBlank(message = "验证码不能为空")
-    private String code;
+
 }

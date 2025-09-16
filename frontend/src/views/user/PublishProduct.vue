@@ -217,9 +217,15 @@ const submitLoading = ref(false)
 const fetchCategories = async () => {
   try {
     const response = await api.get('/categories')
-    categories.value = response.data
+    // 后端返回格式: {code: 200, message: '操作成功', data: [...]}
+    if (response.data && response.data.code === 200) {
+      categories.value = response.data.data
+    } else {
+      throw new Error(response.data?.message || '获取分类列表失败')
+    }
   } catch (error) {
     console.error('获取分类失败:', error)
+    ElMessage.warning('获取分类列表失败')
   }
 }
 

@@ -21,7 +21,7 @@
           </div>
           <div class="user-actions">
             <template v-if="userStore.isLoggedIn">
-              <el-button @click="$router.push('/publish')" type="primary">
+              <el-button @click="$router.push('/user/publish')" type="primary">
                 <el-icon><Plus /></el-icon>
                 发布商品
               </el-button>
@@ -126,8 +126,8 @@
         <!-- 分页 -->
         <div class="pagination-container" v-if="total > 0">
           <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
+            :current-page="currentPage"
+            :page-size="pageSize"
             :page-sizes="[12, 24, 48]"
             :total="total"
             layout="total, sizes, prev, pager, next, jumper"
@@ -171,9 +171,15 @@ const categories = ref([])
 const fetchCategories = async () => {
   try {
     const response = await api.get('/categories')
-    categories.value = response.data
+    // 后端返回格式: {code: 200, message: '操作成功', data: [...]}
+    if (response.data && response.data.code === 200) {
+      categories.value = response.data.data
+    } else {
+      throw new Error(response.data?.message || '获取分类列表失败')
+    }
   } catch (error) {
     console.error('获取分类失败:', error)
+    ElMessage.warning('获取分类列表失败')
   }
 }
 
@@ -233,7 +239,7 @@ const handleCurrentChange = (page) => {
 
 // 查看商品详情
 const viewProduct = (productId) => {
-  router.push(`/product/${productId}`)
+  router.push(`/products/${productId}`)
 }
 
 // 切换收藏
@@ -263,16 +269,16 @@ const toggleFavorite = async (product) => {
 const handleUserCommand = (command) => {
   switch (command) {
     case 'profile':
-      router.push('/user')
+      router.push('/user/profile')
       break
     case 'products':
-      router.push('/my-products')
+      router.push('/user/products')
       break
     case 'orders':
-      router.push('/my-orders')
+      router.push('/user/orders')
       break
     case 'favorites':
-      router.push('/my-favorites')
+      router.push('/user/favorites')
       break
     case 'logout':
       userStore.logout()
