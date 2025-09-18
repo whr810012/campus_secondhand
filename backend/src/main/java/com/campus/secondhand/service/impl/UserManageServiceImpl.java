@@ -50,7 +50,7 @@ public class UserManageServiceImpl implements UserManageService {
         try {
             // 验证用户是否存在
             User user = userMapper.selectById(userId);
-            if (user == null || user.getDeleted()) {
+            if (user == null || user.getDeleted() == 1) {
                 log.warn("用户不存在或已删除: userId={}", userId);
                 return false;
             }
@@ -88,7 +88,7 @@ public class UserManageServiceImpl implements UserManageService {
         try {
             // 验证用户是否存在
             User user = userMapper.selectById(userId);
-            if (user == null || user.getDeleted()) {
+            if (user == null || user.getDeleted() == 1) {
                 log.warn("用户不存在或已删除: userId={}", userId);
                 return false;
             }
@@ -160,7 +160,7 @@ public class UserManageServiceImpl implements UserManageService {
         try {
             // 验证用户是否存在且状态为待审核
             User user = userMapper.selectById(userId);
-            if (user == null || user.getDeleted() || !"PENDING".equals(user.getVerifyStatus())) {
+            if (user == null || user.getDeleted() == 1 || !"PENDING".equals(user.getVerifyStatus())) {
                 log.warn("用户不存在、已删除或不是待审核状态: userId={}, verifyStatus={}", userId, 
                         user != null ? user.getVerifyStatus() : "null");
                 return false;
@@ -278,7 +278,7 @@ public class UserManageServiceImpl implements UserManageService {
         try {
             // 验证用户是否存在
             User user = userMapper.selectById(userId);
-            if (user == null || user.getDeleted()) {
+            if (user == null || user.getDeleted() == 1) {
                 log.warn("用户不存在或已删除: userId={}", userId);
                 throw new RuntimeException("用户不存在或已删除");
             }

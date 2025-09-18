@@ -15,6 +15,10 @@ import MyFavorites from '@/views/user/MyFavorites.vue'
 import Chat from '@/views/user/Chat.vue'
 import OrderDetail from '@/views/user/OrderDetail.vue'
 
+// 布局组件
+import AdminLayout from '@/components/AdminLayout.vue'
+import UserLayout from '@/components/UserLayout.vue'
+
 // 管理员端页面
 import Dashboard from '@/views/admin/Dashboard.vue'
 import ContentAudit from '@/views/admin/ContentAudit.vue'
@@ -45,96 +49,112 @@ const routes = [
     name: 'ProductDetail',
     component: ProductDetail
   },
+  // 用户端路由
   {
-    path: '/user/publish',
-    name: 'PublishProduct',
-    component: PublishProduct,
-    meta: { requiresAuth: true }
+    path: '/user',
+    component: UserLayout,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: Profile
+      },
+      {
+        path: 'products',
+        name: 'MyProducts',
+        component: MyProducts
+      },
+      {
+        path: 'orders',
+        name: 'MyOrders',
+        component: MyOrders
+      },
+      {
+        path: 'favorites',
+        name: 'MyFavorites',
+        component: MyFavorites
+      },
+      {
+        path: 'publish',
+        name: 'PublishProduct',
+        component: PublishProduct
+      },
+
+      {
+        path: 'chat/:userId',
+        name: 'Chat',
+        component: Chat
+      },
+      {
+        path: 'rating/:orderId',
+        name: 'Rating',
+        component: Rating
+      },
+      {
+        path: 'order/:orderId',
+        name: 'OrderDetail',
+        component: OrderDetail
+      },
+      {
+        path: '',
+        redirect: 'profile'
+      }
+    ]
   },
-  {
-    path: '/user/rating/:orderId',
-    name: 'Rating',
-    component: Rating,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/user/profile',
-    name: 'Profile',
-    component: Profile,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/user/products',
-    name: 'MyProducts',
-    component: MyProducts,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/user/orders',
-    name: 'MyOrders',
-    component: MyOrders,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/user/favorites',
-    name: 'MyFavorites',
-    component: MyFavorites,
-    meta: { requiresAuth: true }
-  },
+  // 独立的聊天路由（支持产品ID参数）
   {
     path: '/chat/:userId/:productId?',
-    name: 'Chat',
+    name: 'ChatWithProduct',
     component: Chat,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/user/orders/:id',
-    name: 'OrderDetail',
-    component: OrderDetail,
     meta: { requiresAuth: true }
   },
   // 管理员端路由
   {
-    path: '/admin/dashboard',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/content-audit',
-    name: 'ContentAudit',
-    component: ContentAudit,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/user-manage',
-    name: 'UserManage',
-    component: UserManage,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/product-manage',
-    name: 'ProductManage',
-    component: ProductManage,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/order-manage',
-    name: 'OrderManage',
-    component: OrderManage,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/category-announcement',
-    name: 'CategoryAnnouncement',
-    component: CategoryAnnouncement,
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/operation-log',
-    name: 'OperationLog',
-    component: OperationLog,
-    meta: { requiresAuth: true, requiresAdmin: true }
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: Dashboard
+      },
+      {
+        path: 'content-audit',
+        name: 'ContentAudit',
+        component: ContentAudit
+      },
+      {
+        path: 'user-manage',
+        name: 'UserManage',
+        component: UserManage
+      },
+      {
+        path: 'product-manage',
+        name: 'ProductManage',
+        component: ProductManage
+      },
+      {
+        path: 'order-manage',
+        name: 'OrderManage',
+        component: OrderManage
+      },
+      {
+        path: 'category-announcement',
+        name: 'CategoryAnnouncement',
+        component: CategoryAnnouncement
+      },
+      {
+        path: 'operation-log',
+        name: 'OperationLog',
+        component: OperationLog
+      },
+      {
+        path: '',
+        redirect: 'dashboard'
+      }
+    ]
   }
 ]
 

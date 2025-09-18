@@ -45,7 +45,7 @@ public class ProductManageServiceImpl implements ProductManageService {
         try {
             // 验证商品是否存在
             Product product = productManageMapper.selectById(productId);
-            if (product == null || product.getDeleted()) {
+            if (product == null || product.getDeleted() == 1) {
                 log.warn("商品不存在或已删除: productId={}", productId);
                 return false;
             }
@@ -111,7 +111,7 @@ public class ProductManageServiceImpl implements ProductManageService {
         try {
             // 验证商品是否存在
             Product product = productManageMapper.selectById(productId);
-            if (product == null || product.getDeleted()) {
+            if (product == null || product.getDeleted() == 1) {
                 log.warn("商品不存在或已删除: productId={}", productId);
                 return false;
             }

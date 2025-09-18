@@ -64,7 +64,7 @@ public interface MessageMapper extends BaseMapper<Message> {
         "    LIMIT 1",
         "  ) as lastMessage,",
         "  (",
-        "    SELECT DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') FROM messages m2",
+        "    SELECT DATE_FORMAT(created_at, '&#37;Y-&#37;m-&#37;d &#37;H:&#37;i') FROM messages m2",
         "    WHERE m2.deleted = 0",
         "    AND ((",
         "      (m2.sender_id = #{userId} AND m2.receiver_id = CASE WHEN m.sender_id = #{userId} THEN m.receiver_id ELSE m.sender_id END)",

@@ -37,7 +37,7 @@ public interface AdminMapper {
     @Select({
         "SELECT",
         "  COUNT(*) as totalCount,",
-        "  SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN 1 ELSE 0 END) as newCount,",
+        "  SUM(CASE WHEN created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN 1 ELSE 0 END) as newCount,",
         "  SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as activeCount,",
         "  SUM(CASE WHEN is_verified = 1 THEN 1 ELSE 0 END) as verifiedCount,",
         "  SUM(CASE WHEN status = 'banned' THEN 1 ELSE 0 END) as bannedCount",
@@ -52,7 +52,7 @@ public interface AdminMapper {
     @Select({
         "SELECT",
         "  COUNT(*) as totalCount,",
-        "  SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN 1 ELSE 0 END) as newCount,",
+        "  SUM(CASE WHEN created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN 1 ELSE 0 END) as newCount,",
         "  SUM(CASE WHEN status = 'on_sale' THEN 1 ELSE 0 END) as onSaleCount,",
         "  SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as soldCount,",
         "  SUM(CASE WHEN status = 'pending_review' THEN 1 ELSE 0 END) as pendingReviewCount,",
@@ -68,7 +68,7 @@ public interface AdminMapper {
     @Select({
         "SELECT",
         "  COUNT(*) as totalCount,",
-        "  SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN 1 ELSE 0 END) as newCount,",
+        "  SUM(CASE WHEN created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN 1 ELSE 0 END) as newCount,",
         "  SUM(CASE WHEN status IN ('pending', 'paid', 'shipped') THEN 1 ELSE 0 END) as pendingCount,",
         "  SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completedCount,",
         "  SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelledCount,",
@@ -84,7 +84,7 @@ public interface AdminMapper {
     @Select({
         "SELECT",
         "  COALESCE(SUM(total_amount), 0) as totalAmount,",
-        "  COALESCE(SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN total_amount ELSE 0 END), 0) as newAmount,",
+        "  COALESCE(SUM(CASE WHEN created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY) THEN total_amount ELSE 0 END), 0) as newAmount,",
         "  COUNT(*) as transactionCount,",
         "  COALESCE(AVG(total_amount), 0) as averageAmount",
         "FROM orders",
@@ -99,7 +99,7 @@ public interface AdminMapper {
         "SELECT DATE(created_at) as date, COUNT(*) as count",
         "FROM users",
         "WHERE deleted = 0",
-        "AND created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY)",
+        "AND created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)",
         "GROUP BY DATE(created_at)",
         "ORDER BY date"
     })
@@ -112,7 +112,7 @@ public interface AdminMapper {
         "SELECT DATE(created_at) as date, COUNT(*) as count",
         "FROM products",
         "WHERE deleted = 0",
-        "AND created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY)",
+        "AND created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)",
         "GROUP BY DATE(created_at)",
         "ORDER BY date"
     })
@@ -125,7 +125,7 @@ public interface AdminMapper {
         "SELECT DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount",
         "FROM orders",
         "WHERE deleted = 0",
-        "AND created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY)",
+        "AND created_at &gt;= DATE_SUB(NOW(), INTERVAL #{days} DAY)",
         "GROUP BY DATE(created_at)",
         "ORDER BY date"
     })

@@ -61,8 +61,8 @@ public class MessageServiceImpl implements MessageService {
         message.setProductId(productId);
         message.setContent(content);
         message.setType(type != null ? type : "text");
-        message.setIsRead(0);
-        message.setDeleted(0);
+        message.setIsRead(false);
+        message.setDeleted(false);
         message.setCreatedAt(LocalDateTime.now());
 
         int result = messageMapper.insert(message);

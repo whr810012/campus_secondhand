@@ -30,7 +30,7 @@ public interface AuditMapper extends BaseMapper<AuditLog> {
         "LEFT JOIN categories c ON p.category_id = c.id",
         "WHERE p.deleted = 0 AND p.status = 'pending_review'",
         "<if test='keyword != null and keyword != \"\"'>",
-        "  AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.description LIKE CONCAT('%', #{keyword}, '%'))",
+        "  AND (p.title LIKE CONCAT('&#37;', #{keyword}, '&#37;') OR p.description LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
         "</if>",
         "ORDER BY p.created_at ASC",
         "</script>"
@@ -49,7 +49,7 @@ public interface AuditMapper extends BaseMapper<AuditLog> {
         "LEFT JOIN products p ON r.product_id = p.id",
         "WHERE r.deleted = 0 AND r.status = 'pending_review'",
         "<if test='keyword != null and keyword != \"\"'>",
-        "  AND (r.content LIKE CONCAT('%', #{keyword}, '%') OR p.title LIKE CONCAT('%', #{keyword}, '%'))",
+        "  AND (r.content LIKE CONCAT('&#37;', #{keyword}, '&#37;') OR p.title LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
         "</if>",
         "ORDER BY r.created_at ASC",
         "</script>"
@@ -92,7 +92,7 @@ public interface AuditMapper extends BaseMapper<AuditLog> {
         "  u.nickname as adminName,",
         "  al.status,",
         "  al.reason,",
-        "  DATE_FORMAT(al.created_at, '%Y-%m-%d %H:%i:%s') as createdAt",
+        "  DATE_FORMAT(al.created_at, '&#37;Y-&#37;m-&#37;d &#37;H:&#37;i:&#37;s') as createdAt",
         "FROM audit_logs al",
         "LEFT JOIN users u ON al.admin_id = u.id",
         "WHERE 1=1",
