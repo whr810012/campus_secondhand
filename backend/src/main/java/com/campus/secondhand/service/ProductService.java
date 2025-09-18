@@ -48,4 +48,13 @@ public interface ProductService {
      * @return 创建的商品
      */
     Product createProduct(Product product, String token);
+
+    /**
+     * 删除商品
+     *
+     * @param productId 商品ID
+     * @param userId 用户ID
+     * @return 删除结果
+     */
+    boolean deleteProduct(Long productId, Long userId);
 }

@@ -100,10 +100,11 @@
           <div class="product-filters">
             <el-radio-group v-model="productFilter" @change="fetchMyProducts">
               <el-radio-button label="all">全部</el-radio-button>
-              <el-radio-button label="0">审核中</el-radio-button>
-              <el-radio-button label="1">在售</el-radio-button>
-              <el-radio-button label="2">已售出</el-radio-button>
-              <el-radio-button label="3">已下架</el-radio-button>
+              <el-radio-button label="pending">待审核</el-radio-button>
+              <el-radio-button label="available">在售</el-radio-button>
+              <el-radio-button label="reserved">已预定</el-radio-button>
+              <el-radio-button label="sold">已售出</el-radio-button>
+              <el-radio-button label="unavailable">已下架</el-radio-button>
             </el-radio-group>
           </div>
           
@@ -121,14 +122,19 @@
                 <h4>{{ product.title }}</h4>
                 <p class="product-desc">{{ product.description }}</p>
                 <div class="product-meta">
-                  <span class="price">¥{{ product.price }}</span>
-                  <el-tag :type="getStatusType(product.status)" size="small">
-                    {{ getStatusText(product.status) }}
+                  <div class="price-info">
+                    <span class="price">¥{{ product.price }}</span>
+                    <span v-if="product.originalPrice && product.originalPrice > product.price" class="original-price">原价：¥{{ product.originalPrice }}</span>
+                  </div>
+                  <el-tag :type="getStatusType(product.status, product.auditStatus)" size="small">
+                    {{ getStatusText(product.status, product.auditStatus) }}
                   </el-tag>
                 </div>
                 <div class="product-stats">
                   <span>浏览：{{ product.viewCount }}</span>
                   <span>收藏：{{ product.favoriteCount }}</span>
+                  <span>成色：{{ getConditionText(product.condition) }}</span>
+                  <span>交易：{{ getTradeTypeText(product.tradeType) }}</span>
                   <span>发布：{{ formatDate(product.createdAt) }}</span>
                 </div>
               </div>
@@ -140,21 +146,9 @@
                 <el-button size="small" type="primary" @click="editProduct(product.id)">
                   编辑
                 </el-button>
-                <el-dropdown @command="handleProductAction">
-                  <el-button size="small">
-                    更多<el-icon><ArrowDown /></el-icon>
-                  </el-button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item :command="{ action: 'top', id: product.id }">
-                        {{ product.isTop ? '取消置顶' : '置顶' }}
-                      </el-dropdown-item>
-                      <el-dropdown-item :command="{ action: 'delete', id: product.id }">
-                        删除
-                      </el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
+                <el-button size="small" type="danger" @click="handleDeleteProduct(product.id)">
+                  删除
+                </el-button>
               </div>
             </div>
             
@@ -177,11 +171,13 @@
           <div class="order-filters">
             <el-radio-group v-model="orderFilter" @change="fetchMyOrders">
               <el-radio-button label="all">全部</el-radio-button>
-              <el-radio-button label="0">待付款</el-radio-button>
-              <el-radio-button label="1">待发货</el-radio-button>
-              <el-radio-button label="2">待收货</el-radio-button>
-              <el-radio-button label="3">已完成</el-radio-button>
-              <el-radio-button label="4">已取消</el-radio-button>
+              <el-radio-button label="pending">待付款</el-radio-button>
+              <el-radio-button label="paid">已付款</el-radio-button>
+              <el-radio-button label="shipped">已发货</el-radio-button>
+              <el-radio-button label="delivered">已送达</el-radio-button>
+              <el-radio-button label="completed">已完成</el-radio-button>
+              <el-radio-button label="cancelled">已取消</el-radio-button>
+              <el-radio-button label="refunded">已退款</el-radio-button>
             </el-radio-group>
           </div>
           
@@ -216,7 +212,7 @@
                     查看详情
                   </el-button>
                   <el-button
-                    v-if="order.status === 0"
+                    v-if="order.status === 'pending'"
                     size="small"
                     type="primary"
                     @click="payOrder(order.id)"
@@ -224,7 +220,7 @@
                     立即付款
                   </el-button>
                   <el-button
-                    v-if="order.status === 2"
+                    v-if="order.status === 'shipped'"
                     size="small"
                     type="success"
                     @click="confirmReceive(order.id)"
@@ -232,7 +228,7 @@
                     确认收货
                   </el-button>
                   <el-button
-                    v-if="order.status === 3"
+                    v-if="order.status === 'completed'"
                     size="small"
                     @click="rateOrder(order.id)"
                   >
@@ -418,6 +414,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { CircleCheck, Warning, Delete } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import {
   getUserProfile,
@@ -550,7 +547,16 @@ const fetchUserStats = async () => {
 const fetchMyProducts = async () => {
   loading.products = true
   try {
-    const params = productFilter.value === 'all' ? {} : { status: productFilter.value }
+    let params = {}
+    if (productFilter.value !== 'all') {
+      if (productFilter.value === 'pending') {
+        // 待审核状态使用audit_status参数，数据库中0表示待审核
+        params.audit_status = 0
+      } else {
+        // 其他状态使用status参数
+        params.status = productFilter.value
+      }
+    }
     const response = await getMyProducts(params)
     myProducts.value = response.data.records || []
   } catch (error) {
@@ -605,48 +611,92 @@ const maskPhone = (phone) => {
   return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
 }
 
-const getStatusText = (status) => {
-  const statusMap = {
-    0: '审核中',
-    1: '在售',
-    2: '已售出',
-    3: '已下架',
-    4: '审核不通过'
+const getStatusText = (status, auditStatus) => {
+  // 优先显示审核状态
+  if (auditStatus === 0) {
+    return '待审核'
   }
+  if (auditStatus === 2) {
+    return '审核不通过'
+  }
+  
+  // 审核通过后显示商品状态
+  const statusMap = {
+    'available': '在售',
+    'reserved': '已预定', 
+    'sold': '已售出',
+    'unavailable': '已下架'
+  }
+  
   return statusMap[status] || '未知'
 }
 
-const getStatusType = (status) => {
-  const typeMap = {
-    0: 'warning',
-    1: 'success',
-    2: 'info',
-    3: 'warning',
-    4: 'danger'
+const getStatusType = (status, auditStatus) => {
+  // 优先显示审核状态
+  if (auditStatus === 0) {
+    return 'warning'
   }
+  if (auditStatus === 2) {
+    return 'danger'
+  }
+  
+  // 审核通过后显示商品状态
+  const typeMap = {
+    'available': 'success',
+    'reserved': 'primary',
+    'sold': 'info', 
+    'unavailable': 'warning'
+  }
+  
   return typeMap[status] || 'info'
 }
 
 const getOrderStatusText = (status) => {
   const statusMap = {
-    0: '待付款',
-    1: '待发货',
-    2: '待收货',
-    3: '已完成',
-    4: '已取消'
+    'pending': '待付款',
+    'paid': '已付款',
+    'shipped': '已发货',
+    'delivered': '已送达',
+    'completed': '已完成',
+    'cancelled': '已取消',
+    'refunded': '已退款'
   }
   return statusMap[status] || '未知'
 }
 
 const getOrderStatusType = (status) => {
   const typeMap = {
-    0: 'warning',
-    1: 'primary',
-    2: 'info',
-    3: 'success',
-    4: 'danger'
+    'pending': 'warning',
+    'paid': 'primary',
+    'shipped': 'info',
+    'delivered': 'primary',
+    'completed': 'success',
+    'cancelled': 'danger',
+    'refunded': 'warning'
   }
   return typeMap[status] || 'info'
+}
+
+// 商品成色映射
+const getConditionText = (condition) => {
+  const conditionMap = {
+    1: '全新',
+    2: '几乎全新',
+    3: '轻微使用痕迹',
+    4: '明显使用痕迹',
+    5: '重度使用痕迹'
+  }
+  return conditionMap[condition] || '未知'
+}
+
+// 交易方式映射
+const getTradeTypeText = (tradeType) => {
+  const tradeTypeMap = {
+    1: '仅线下',
+    2: '仅线上',
+    3: '线上线下均可'
+  }
+  return tradeTypeMap[tradeType] || '未知'
 }
 
 // 事件处理
@@ -747,26 +797,28 @@ const editProduct = (productId) => {
   router.push(`/publish?id=${productId}`)
 }
 
-const handleProductAction = ({ action, id }) => {
-  if (action === 'top') {
-    // TODO: 置顶/取消置顶
-    ElMessage.info('功能开发中')
-  } else if (action === 'delete') {
-    ElMessageBox.confirm('确定要删除这个商品吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }).then(async () => {
-      try {
-        await deleteProduct(id, userStore.user.id)
-        ElMessage.success('删除成功')
-        fetchMyProducts()
-      } catch (error) {
-        console.error('删除商品失败:', error)
-        ElMessage.error('删除失败，请重试')
-      }
-    })
+const handleDeleteProduct = (productId) => {
+  if (!productId) {
+    ElMessage.error('商品ID无效')
+    return
   }
+  
+  ElMessageBox.confirm('确定要删除这个商品吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+    console.log('userStore', userStore)
+    
+      await deleteProduct(productId, userStore.userInfo.id)
+      ElMessage.success('删除成功')
+      fetchMyProducts()
+    } catch (error) {
+      console.error('删除商品失败:', error)
+      ElMessage.error('删除失败，请重试')
+    }
+  })
 }
 
 const viewOrderDetail = (orderId) => {
@@ -1022,10 +1074,22 @@ watch(activeTab, (newTab) => {
               gap: 12px;
               margin-bottom: 8px;
               
-              .price {
-                font-size: 16px;
-                font-weight: 600;
-                color: var(--danger-color);
+              .price-info {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                
+                .price {
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: var(--danger-color);
+                }
+                
+                .original-price {
+                  font-size: 14px;
+                  color: var(--text-secondary);
+                  text-decoration: line-through;
+                }
               }
             }
             

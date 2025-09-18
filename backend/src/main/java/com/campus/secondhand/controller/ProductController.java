@@ -95,4 +95,27 @@ public class ProductController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 删除商品
+     *
+     * @param id 商品ID
+     * @param userId 用户ID（查询参数）
+     * @return 删除结果
+     */
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteProduct(
+            @PathVariable Long id,
+            @RequestParam Long userId) {
+        try {
+            boolean success = productService.deleteProduct(id, userId);
+            if (success) {
+                return Result.success();
+            } else {
+                return Result.error("删除商品失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

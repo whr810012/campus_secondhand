@@ -51,8 +51,7 @@ public class ImgServiceImpl extends ServiceImpl<ImgMapper, Img> implements ImgSe
     public Img getImgById(Long id) {
         QueryWrapper<Img> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("id", id)
-                   .eq("status", 1)
-                   .eq("deleted", 0);
+                   .eq("status", 1);
         return getOne(queryWrapper);
     }
 

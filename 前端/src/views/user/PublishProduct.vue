@@ -467,8 +467,8 @@ const submitForm = async () => {
       originalPrice: form.originalPrice ? parseFloat(form.originalPrice) : null,
       categoryId: Array.isArray(form.categoryId) ? form.categoryId[form.categoryId.length - 1] : form.categoryId,
       condition: form.condition,
-      images: form.images,
-      tags: form.tags,
+      imageList: form.images, // 修改为imageList字段
+      tagList: form.tags, // 修改为tagList字段
       tradeType: tradeTypeValue,
       tradeLocation: form.location
       // 注意：contact字段不包含在Product实体中，联系方式通过用户信息获取

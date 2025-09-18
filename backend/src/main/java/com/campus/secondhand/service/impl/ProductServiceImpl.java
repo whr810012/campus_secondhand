@@ -78,10 +78,15 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product getProductById(Long id) {
+        log.info("开始查询商品: productId={}", id);
         Product product = productMapper.selectById(id);
         if (product != null) {
+            log.info("查询到商品: productId={}, images字段={}", product.getId(), product.getImages());
             // 加载图片数据
             loadProductData(product);
+            log.info("加载完成后imageList大小: {}", product.getImageList() != null ? product.getImageList().size() : "null");
+        } else {
+            log.warn("商品不存在: productId={}", id);
         }
         return product;
     }
@@ -91,6 +96,7 @@ public class ProductServiceImpl implements ProductService {
      * 从images字段中的图片ID集合获取对应的base64数据
      */
     private void loadProductData(Product product) {
+        log.info("开始加载商品数据: productId={}, images字段={}", product.getId(), product.getImages());
         // 加载图片数据
         if (product != null && StringUtils.hasText(product.getImages())) {
             log.info("开始加载商品图片: productId={}, images={}, 当前imageList={}", product.getId(), product.getImages(), product.getImageList());
@@ -102,14 +108,17 @@ public class ProductServiceImpl implements ProductService {
                 
                 List<String> imageList = new ArrayList<>();
                 for (Long imageId : imageIds) {
-                    Img img = imgService.getById(imageId);
+                    log.info("查询图片: imageId={}", imageId);
+                    Img img = imgService.getImgById(imageId);
                     if (img != null && img.getStatus() == 1) { // 只获取正常状态的图片
+                        log.info("找到图片: imageId={}, name={}, status={}", img.getId(), img.getName(), img.getStatus());
                         imageList.add(img.getBase64Data());
                         log.info("成功加载图片: imageId={}, dataLength={}", imageId, img.getBase64Data().length());
                     } else {
                         log.warn("图片不存在或状态异常: imageId={}, img={}", imageId, img);
                     }
                 }
+                log.info("最终图片列表大小: {}", imageList.size());
                 product.setImageList(imageList);
                 log.info("设置图片列表完成: imageList大小={}, 内容前100字符={}", imageList.size(), 
                     imageList.isEmpty() ? "空" : imageList.get(0).substring(0, Math.min(100, imageList.get(0).length())));
@@ -301,6 +310,41 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             log.error("创建商品失败: {}", e.getMessage());
             throw new RuntimeException("创建商品失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteProduct(Long productId, Long userId) {
+        log.info("删除商品: productId={}, userId={}", productId, userId);
+        
+        try {
+            // 验证商品是否存在且属于当前用户
+            Product product = productMapper.selectById(productId);
+            if (product == null || product.getDeleted() == 1) {
+                log.warn("商品不存在或已删除: productId={}", productId);
+                return false;
+            }
+            
+            if (!product.getSellerId().equals(userId)) {
+                log.warn("用户无权删除该商品: productId={}, userId={}, productSellerId={}", 
+                        productId, userId, product.getSellerId());
+                return false;
+            }
+            
+            // 使用MyBatis-Plus的逻辑删除
+            int result = productMapper.deleteById(productId);
+            
+            if (result > 0) {
+                log.info("商品删除成功: productId={}", productId);
+                return true;
+            } else {
+                log.error("商品删除失败: productId={}", productId);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("删除商品异常: productId={}, userId={}, error={}", productId, userId, e.getMessage(), e);
+            return false;
         }
     }
 }

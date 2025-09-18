@@ -64,12 +64,7 @@ public class Img implements Serializable {
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
-    /**
-     * 逻辑删除字段
-     */
-    @TableLogic
-    @TableField("deleted")
-    private Integer deleted;
+
 
 
 }
