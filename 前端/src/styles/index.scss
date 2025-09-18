@@ -1,0 +1,220 @@
+// 全局样式文件
+
+// 变量定义
+:root {
+  --primary-color: #409eff;
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --info-color: #909399;
+  
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #c0c4cc;
+  
+  --border-base: #dcdfe6;
+  --border-light: #e4e7ed;
+  --border-lighter: #ebeef5;
+  --border-extra-light: #f2f6fc;
+  
+  --background-base: #f5f7fa;
+  --background-light: #fafafa;
+}
+
+// 全局重置
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--background-base);
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  
+  &:hover {
+    color: var(--primary-color);
+  }
+}
+
+ul, ol {
+  list-style: none;
+}
+
+// 布局相关
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.flex {
+  display: flex;
+  
+  &.justify-center {
+    justify-content: center;
+  }
+  
+  &.justify-between {
+    justify-content: space-between;
+  }
+  
+  &.align-center {
+    align-items: center;
+  }
+  
+  &.column {
+    flex-direction: column;
+  }
+}
+
+// 文本相关
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-primary {
+  color: var(--primary-color);
+}
+
+.text-success {
+  color: var(--success-color);
+}
+
+.text-warning {
+  color: var(--warning-color);
+}
+
+.text-danger {
+  color: var(--danger-color);
+}
+
+.text-muted {
+  color: var(--text-secondary);
+}
+
+// 间距相关
+.mt-10 { margin-top: 10px; }
+.mt-20 { margin-top: 20px; }
+.mt-30 { margin-top: 30px; }
+
+.mb-10 { margin-bottom: 10px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+
+.ml-10 { margin-left: 10px; }
+.ml-20 { margin-left: 20px; }
+
+.mr-10 { margin-right: 10px; }
+.mr-20 { margin-right: 20px; }
+
+.p-10 { padding: 10px; }
+.p-20 { padding: 20px; }
+.p-30 { padding: 30px; }
+
+// 卡片样式
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+// 按钮样式增强
+.el-button {
+  border-radius: 6px;
+  
+  &.is-round {
+    border-radius: 20px;
+  }
+}
+
+// 表单样式增强
+.el-form-item {
+  margin-bottom: 22px;
+}
+
+.el-input {
+  .el-input__inner {
+    border-radius: 6px;
+  }
+}
+
+// 表格样式增强
+.el-table {
+  border-radius: 8px;
+  overflow: hidden;
+  
+  .el-table__header {
+    th {
+      background-color: #fafafa;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+  }
+}
+
+// 分页样式
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+// 加载状态
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+// 空状态
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: var(--text-secondary);
+  
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+  
+  .empty-text {
+    font-size: 16px;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .container {
+    padding: 0 10px;
+  }
+  
+  .card {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+}

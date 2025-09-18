@@ -1,0 +1,1318 @@
+<template>
+  <div class="profile-page">
+    <div class="container">
+      <!-- 个人信息卡片 -->
+      <el-card class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-section">
+            <el-avatar :src="userInfo.avatar" :size="80">
+              {{ userInfo.nickname?.charAt(0) }}
+            </el-avatar>
+          </div>
+          
+          <div class="user-info">
+            <h2>{{ userInfo.nickname }}</h2>
+            <div class="user-meta">
+              <el-tag v-if="userInfo.verifyStatus === 2" type="success" size="small">
+                <el-icon><CircleCheck /></el-icon>
+                已认证学生
+              </el-tag>
+              <el-tag v-else-if="userInfo.verifyStatus === 1" type="warning" size="small">
+                <el-icon><Warning /></el-icon>
+                认证审核中
+              </el-tag>
+              <el-tag v-else-if="userInfo.verifyStatus === 3" type="danger" size="small">
+                <el-icon><Warning /></el-icon>
+                认证失败
+              </el-tag>
+              <el-tag v-else type="info" size="small">
+                <el-icon><Warning /></el-icon>
+                未认证
+              </el-tag>
+              <span class="join-date">加入时间：{{ formatDate(userInfo.createdAt) }}</span>
+            </div>
+            <div class="user-stats">
+              <div class="stat-item">
+                <span class="stat-value">{{ userStats.productCount }}</span>
+                <span class="stat-label">发布商品</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ userStats.orderCount }}</span>
+                <span class="stat-label">交易订单</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ userStats.favoriteCount }}</span>
+                <span class="stat-label">收藏商品</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ userInfo.creditScore || 0 }}</span>
+                <span class="stat-label">信誉积分</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-actions">
+            <el-button type="primary" @click="showEditDialog = true">
+              编辑资料
+            </el-button>
+            <el-button v-if="userInfo.verifyStatus !== 2" type="warning" @click="goToVerification">
+              学生认证
+            </el-button>
+          </div>
+        </div>
+      </el-card>
+      
+      <!-- 功能导航 -->
+      <div class="function-nav">
+        <el-card
+          v-for="item in functionItems"
+          :key="item.key"
+          class="function-item"
+          :class="{ active: activeTab === item.key }"
+          @click="activeTab = item.key"
+        >
+          <div class="function-content">
+            <el-icon class="function-icon" :size="24">
+              <component :is="item.icon" />
+            </el-icon>
+            <div class="function-info">
+              <h4>{{ item.title }}</h4>
+              <p>{{ item.description }}</p>
+            </div>
+            <div class="function-count">
+              {{ item.count }}
+            </div>
+          </div>
+        </el-card>
+      </div>
+      
+      <!-- 内容区域 -->
+      <div class="content-area">
+        <!-- 我的发布 -->
+        <div v-if="activeTab === 'products'" class="tab-content">
+          <div class="content-header">
+            <h3>我的发布</h3>
+            <el-button type="primary" @click="$router.push('/publish')">
+              发布新商品
+            </el-button>
+          </div>
+          
+          <div class="product-filters">
+            <el-radio-group v-model="productFilter" @change="fetchMyProducts">
+              <el-radio-button label="all">全部</el-radio-button>
+              <el-radio-button label="0">审核中</el-radio-button>
+              <el-radio-button label="1">在售</el-radio-button>
+              <el-radio-button label="2">已售出</el-radio-button>
+              <el-radio-button label="3">已下架</el-radio-button>
+            </el-radio-group>
+          </div>
+          
+          <div v-loading="loading.products" class="products-list">
+            <div
+              v-for="product in myProducts"
+              :key="product.id"
+              class="product-item"
+            >
+              <div class="product-image">
+                <img :src="getProductImage(product.images)" :alt="product.title" />
+              </div>
+              
+              <div class="product-info">
+                <h4>{{ product.title }}</h4>
+                <p class="product-desc">{{ product.description }}</p>
+                <div class="product-meta">
+                  <span class="price">¥{{ product.price }}</span>
+                  <el-tag :type="getStatusType(product.status)" size="small">
+                    {{ getStatusText(product.status) }}
+                  </el-tag>
+                </div>
+                <div class="product-stats">
+                  <span>浏览：{{ product.viewCount }}</span>
+                  <span>收藏：{{ product.favoriteCount }}</span>
+                  <span>发布：{{ formatDate(product.createdAt) }}</span>
+                </div>
+              </div>
+              
+              <div class="product-actions">
+                <el-button size="small" @click="viewProduct(product.id)">
+                  查看
+                </el-button>
+                <el-button size="small" type="primary" @click="editProduct(product.id)">
+                  编辑
+                </el-button>
+                <el-dropdown @command="handleProductAction">
+                  <el-button size="small">
+                    更多<el-icon><ArrowDown /></el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item :command="{ action: 'top', id: product.id }">
+                        {{ product.isTop ? '取消置顶' : '置顶' }}
+                      </el-dropdown-item>
+                      <el-dropdown-item :command="{ action: 'delete', id: product.id }">
+                        删除
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </div>
+            
+            <div v-if="!loading.products && myProducts.length === 0" class="empty-state">
+              <el-icon class="empty-icon"><Box /></el-icon>
+              <p>暂无发布的商品</p>
+              <el-button type="primary" @click="$router.push('/publish')">
+                发布第一个商品
+              </el-button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 我的订单 -->
+        <div v-if="activeTab === 'orders'" class="tab-content">
+          <div class="content-header">
+            <h3>我的订单</h3>
+          </div>
+          
+          <div class="order-filters">
+            <el-radio-group v-model="orderFilter" @change="fetchMyOrders">
+              <el-radio-button label="all">全部</el-radio-button>
+              <el-radio-button label="0">待付款</el-radio-button>
+              <el-radio-button label="1">待发货</el-radio-button>
+              <el-radio-button label="2">待收货</el-radio-button>
+              <el-radio-button label="3">已完成</el-radio-button>
+              <el-radio-button label="4">已取消</el-radio-button>
+            </el-radio-group>
+          </div>
+          
+          <div v-loading="loading.orders" class="orders-list">
+            <div
+              v-for="order in myOrders"
+              :key="order.id"
+              class="order-item"
+            >
+              <div class="order-header">
+                <span class="order-no">订单号：{{ order.orderNo }}</span>
+                <el-tag :type="getOrderStatusType(order.status)" size="small">
+                  {{ getOrderStatusText(order.status) }}
+                </el-tag>
+              </div>
+              
+              <div class="order-content">
+                <div class="product-info">
+                  <img :src="getProductImage(order.product?.images)" :alt="order.product?.title" />
+                  <div class="product-details">
+                    <h4>{{ order.product?.title }}</h4>
+                    <p>{{ order.product?.description }}</p>
+                    <div class="price-info">
+                      <span class="price">¥{{ order.totalAmount }}</span>
+                      <span class="quantity">x{{ order.quantity }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="order-actions">
+                  <el-button size="small" @click="viewOrderDetail(order.id)">
+                    查看详情
+                  </el-button>
+                  <el-button
+                    v-if="order.status === 0"
+                    size="small"
+                    type="primary"
+                    @click="payOrder(order.id)"
+                  >
+                    立即付款
+                  </el-button>
+                  <el-button
+                    v-if="order.status === 2"
+                    size="small"
+                    type="success"
+                    @click="confirmReceive(order.id)"
+                  >
+                    确认收货
+                  </el-button>
+                  <el-button
+                    v-if="order.status === 3"
+                    size="small"
+                    @click="rateOrder(order.id)"
+                  >
+                    评价
+                  </el-button>
+                </div>
+              </div>
+              
+              <div class="order-footer">
+                <span class="order-time">下单时间：{{ formatDate(order.createdAt) }}</span>
+              </div>
+            </div>
+            
+            <div v-if="!loading.orders && myOrders.length === 0" class="empty-state">
+              <el-icon class="empty-icon"><ShoppingCart /></el-icon>
+              <p>暂无订单记录</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 我的收藏 -->
+        <div v-if="activeTab === 'favorites'" class="tab-content">
+          <div class="content-header">
+            <h3>我的收藏</h3>
+          </div>
+          
+          <div v-loading="loading.favorites" class="favorites-grid">
+            <div
+              v-for="item in myFavorites"
+              :key="item.id"
+              class="favorite-item"
+            >
+              <div class="product-image">
+                <img :src="getProductImage(item.product?.images)" :alt="item.product?.title" />
+                <div class="favorite-actions">
+                  <el-button
+                    size="small"
+                    type="danger"
+                    circle
+                    @click="removeFavorite(item.id)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+              
+              <div class="product-info">
+                <h4 @click="viewProduct(item.product?.id)">{{ item.product?.title }}</h4>
+                <div class="product-meta">
+                  <span class="price">¥{{ item.product?.price }}</span>
+                  <span class="time">{{ formatDate(item.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="!loading.favorites && myFavorites.length === 0" class="empty-state">
+              <el-icon class="empty-icon"><Star /></el-icon>
+              <p>暂无收藏的商品</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 账户设置 -->
+        <div v-if="activeTab === 'settings'" class="tab-content">
+          <div class="content-header">
+            <h3>账户设置</h3>
+          </div>
+          
+          <div class="settings-list">
+            <el-card class="setting-item" @click="showPasswordDialog = true">
+              <div class="setting-content">
+                <el-icon class="setting-icon"><Lock /></el-icon>
+                <div class="setting-info">
+                  <h4>修改密码</h4>
+                  <p>定期修改密码，保护账户安全</p>
+                </div>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+              </div>
+            </el-card>
+            
+            <el-card class="setting-item" @click="showPhoneDialog = true">
+              <div class="setting-content">
+                <el-icon class="setting-icon"><Phone /></el-icon>
+                <div class="setting-info">
+                  <h4>修改手机号</h4>
+                  <p>当前手机号：{{ maskPhone(userInfo.phone) }}</p>
+                </div>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+              </div>
+            </el-card>
+            
+            <el-card class="setting-item" @click="logout">
+              <div class="setting-content">
+                <el-icon class="setting-icon"><SwitchButton /></el-icon>
+                <div class="setting-info">
+                  <h4>退出登录</h4>
+                  <p>退出当前账户</p>
+                </div>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+              </div>
+            </el-card>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 编辑资料对话框 -->
+    <el-dialog v-model="showEditDialog" title="编辑资料" width="500px">
+      <el-form :model="editForm" label-width="80px">
+        <el-form-item label="昵称">
+          <el-input v-model="editForm.nickname" placeholder="请输入昵称" />
+        </el-form-item>
+
+      </el-form>
+      
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="updateProfile">保存</el-button>
+      </template>
+    </el-dialog>
+    
+    <!-- 更换头像对话框 -->
+    <el-dialog v-model="showAvatarDialog" title="更换头像" width="400px">
+      <div class="avatar-upload">
+        <el-upload
+          :action="uploadAction"
+          :headers="uploadHeaders"
+          :show-file-list="false"
+          :on-success="handleAvatarSuccess"
+          :before-upload="beforeAvatarUpload"
+        >
+          <el-avatar :src="previewAvatar || userInfo.avatar" :size="120">
+            {{ userInfo.nickname?.charAt(0) }}
+          </el-avatar>
+          <div class="upload-tip">点击上传新头像</div>
+        </el-upload>
+      </div>
+      
+      <template #footer>
+        <el-button @click="showAvatarDialog = false">取消</el-button>
+        <el-button type="primary" @click="updateAvatar">保存</el-button>
+      </template>
+    </el-dialog>
+    
+    <!-- 修改密码对话框 -->
+    <el-dialog v-model="showPasswordDialog" title="修改密码" width="400px">
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef">
+        <el-form-item label="当前密码" prop="oldPassword">
+          <el-input
+            v-model="passwordForm.oldPassword"
+            type="password"
+            placeholder="请输入当前密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            placeholder="请输入新密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            placeholder="请再次输入新密码"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <el-button @click="showPasswordDialog = false">取消</el-button>
+        <el-button type="primary" @click="changePassword">确认修改</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import {
+  getUserProfile,
+  updateUserProfile,
+  getUserStats,
+  getMyProducts,
+  getMyOrders,
+  getMyFavorites,
+  changePassword as changePasswordApi
+} from '@/api/auth'
+import { deleteProduct } from '@/api/product'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+const activeTab = ref('products')
+const showEditDialog = ref(false)
+const showAvatarDialog = ref(false)
+const showPasswordDialog = ref(false)
+const showPhoneDialog = ref(false)
+const previewAvatar = ref('')
+
+const productFilter = ref('all')
+const orderFilter = ref('all')
+
+const loading = reactive({
+  products: false,
+  orders: false,
+  favorites: false
+})
+
+const userInfo = ref({})
+const userStats = ref({})
+const myProducts = ref([])
+const myOrders = ref([])
+const myFavorites = ref([])
+
+const editForm = reactive({
+  nickname: ''
+})
+
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const passwordRules = {
+  oldPassword: [
+    { required: true, message: '请输入当前密码', trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== passwordForm.newPassword) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+// 功能导航项
+const functionItems = computed(() => [
+  {
+    key: 'products',
+    title: '我的发布',
+    description: '管理我发布的商品',
+    icon: 'Box',
+    count: userStats.value.productCount || 0
+  },
+  {
+    key: 'orders',
+    title: '我的订单',
+    description: '查看购买记录',
+    icon: 'ShoppingCart',
+    count: userStats.value.orderCount || 0
+  },
+  {
+    key: 'favorites',
+    title: '我的收藏',
+    description: '收藏的商品',
+    icon: 'Star',
+    count: userStats.value.favoriteCount || 0
+  },
+  {
+    key: 'settings',
+    title: '账户设置',
+    description: '个人信息设置',
+    icon: 'Setting',
+    count: ''
+  }
+])
+
+const uploadAction = '/api/upload/avatar'
+const uploadHeaders = {
+  Authorization: `Bearer ${userStore.token}`
+}
+
+// 获取用户信息
+const fetchUserProfile = async () => {
+  try {
+    const response = await getUserProfile()
+    userInfo.value = response.data
+    editForm.nickname = userInfo.value.nickname
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  }
+}
+
+// 获取用户统计
+const fetchUserStats = async () => {
+  try {
+    const response = await getUserStats()
+    userStats.value = response.data
+  } catch (error) {
+    console.error('获取用户统计失败:', error)
+  }
+}
+
+// 获取我的商品
+const fetchMyProducts = async () => {
+  loading.products = true
+  try {
+    const params = productFilter.value === 'all' ? {} : { status: productFilter.value }
+    const response = await getMyProducts(params)
+    myProducts.value = response.data.records || []
+  } catch (error) {
+    console.error('获取我的商品失败:', error)
+  } finally {
+    loading.products = false
+  }
+}
+
+// 获取我的订单
+const fetchMyOrders = async () => {
+  loading.orders = true
+  try {
+    const params = orderFilter.value === 'all' ? {} : { status: orderFilter.value }
+    const response = await getMyOrders(params)
+    myOrders.value = response.data.records || []
+  } catch (error) {
+    console.error('获取我的订单失败:', error)
+  } finally {
+    loading.orders = false
+  }
+}
+
+// 获取我的收藏
+const fetchMyFavorites = async () => {
+  loading.favorites = true
+  try {
+    const response = await getMyFavorites()
+    myFavorites.value = response.data.records || []
+  } catch (error) {
+    console.error('获取我的收藏失败:', error)
+  } finally {
+    loading.favorites = false
+  }
+}
+
+// 工具函数
+const getProductImage = (images) => {
+  if (images && images.length > 0) {
+    return images[0]
+  }
+  return 'https://via.placeholder.com/200x150/f5f5f5/cccccc?text=暂无图片'
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('zh-CN')
+}
+
+const maskPhone = (phone) => {
+  if (!phone) return ''
+  return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+}
+
+const getStatusText = (status) => {
+  const statusMap = {
+    0: '审核中',
+    1: '在售',
+    2: '已售出',
+    3: '已下架',
+    4: '审核不通过'
+  }
+  return statusMap[status] || '未知'
+}
+
+const getStatusType = (status) => {
+  const typeMap = {
+    0: 'warning',
+    1: 'success',
+    2: 'info',
+    3: 'warning',
+    4: 'danger'
+  }
+  return typeMap[status] || 'info'
+}
+
+const getOrderStatusText = (status) => {
+  const statusMap = {
+    0: '待付款',
+    1: '待发货',
+    2: '待收货',
+    3: '已完成',
+    4: '已取消'
+  }
+  return statusMap[status] || '未知'
+}
+
+const getOrderStatusType = (status) => {
+  const typeMap = {
+    0: 'warning',
+    1: 'primary',
+    2: 'info',
+    3: 'success',
+    4: 'danger'
+  }
+  return typeMap[status] || 'info'
+}
+
+// 事件处理
+const updateProfile = async () => {
+  try {
+    await updateUserProfile(editForm)
+    ElMessage.success('资料更新成功')
+    showEditDialog.value = false
+    await fetchUserProfile()
+  } catch (error) {
+    console.error('更新资料失败:', error)
+    ElMessage.error('更新资料失败')
+  }
+}
+
+const handleAvatarSuccess = (response) => {
+  if (response.code === 200) {
+    previewAvatar.value = response.data.url
+    ElMessage.success('头像上传成功')
+  }
+}
+
+const beforeAvatarUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+  
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('头像大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+const updateAvatar = async () => {
+  if (!previewAvatar.value) {
+    ElMessage.warning('请先上传头像')
+    return
+  }
+  
+  try {
+    await updateUserProfile({ avatar: previewAvatar.value })
+    ElMessage.success('头像更新成功')
+    showAvatarDialog.value = false
+    previewAvatar.value = ''
+    await fetchUserProfile()
+  } catch (error) {
+    console.error('更新头像失败:', error)
+    ElMessage.error('更新头像失败')
+  }
+}
+
+const changePassword = async () => {
+  try {
+    await passwordFormRef.value.validate()
+    await changePasswordApi(passwordForm)
+    ElMessage.success('密码修改成功')
+    showPasswordDialog.value = false
+    Object.assign(passwordForm, {
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+  } catch (error) {
+    console.error('修改密码失败:', error)
+    ElMessage.error('修改密码失败')
+  }
+}
+
+const logout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await userStore.logout()
+    ElMessage.success('已退出登录')
+    router.push('/login')
+  } catch (error) {
+    // 用户取消
+  }
+}
+
+const goToVerification = () => {
+  router.push('/verification')
+}
+
+const viewProduct = (productId) => {
+  router.push(`/product/${productId}`)
+}
+
+const editProduct = (productId) => {
+  router.push(`/publish?id=${productId}`)
+}
+
+const handleProductAction = ({ action, id }) => {
+  if (action === 'top') {
+    // TODO: 置顶/取消置顶
+    ElMessage.info('功能开发中')
+  } else if (action === 'delete') {
+    ElMessageBox.confirm('确定要删除这个商品吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      try {
+        await deleteProduct(id, userStore.user.id)
+        ElMessage.success('删除成功')
+        fetchMyProducts()
+      } catch (error) {
+        console.error('删除商品失败:', error)
+        ElMessage.error('删除失败，请重试')
+      }
+    })
+  }
+}
+
+const viewOrderDetail = (orderId) => {
+  router.push(`/order/${orderId}`)
+}
+
+const payOrder = (orderId) => {
+  router.push(`/order/pay/${orderId}`)
+}
+
+const confirmReceive = (orderId) => {
+  ElMessageBox.confirm('确定已收到商品吗？', '确认收货', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'info'
+  }).then(() => {
+    // TODO: 确认收货
+    ElMessage.success('确认收货成功')
+    fetchMyOrders()
+  })
+}
+
+const rateOrder = (orderId) => {
+  router.push(`/order/rate/${orderId}`)
+}
+
+const removeFavorite = (favoriteId) => {
+  ElMessageBox.confirm('确定要取消收藏吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    // TODO: 取消收藏
+    ElMessage.success('取消收藏成功')
+    fetchMyFavorites()
+  })
+}
+
+// 初始化
+onMounted(async () => {
+  await Promise.all([
+    fetchUserProfile(),
+    fetchUserStats()
+  ])
+  
+  // 根据当前标签加载对应数据
+  if (activeTab.value === 'products') {
+    fetchMyProducts()
+  } else if (activeTab.value === 'orders') {
+    fetchMyOrders()
+  } else if (activeTab.value === 'favorites') {
+    fetchMyFavorites()
+  }
+})
+
+// 监听标签切换
+watch(activeTab, (newTab) => {
+  if (newTab === 'products' && myProducts.value.length === 0) {
+    fetchMyProducts()
+  } else if (newTab === 'orders' && myOrders.value.length === 0) {
+    fetchMyOrders()
+  } else if (newTab === 'favorites' && myFavorites.value.length === 0) {
+    fetchMyFavorites()
+  }
+})
+</script>
+
+<style lang="scss" scoped>
+.profile-page {
+  .profile-card {
+    margin-bottom: 24px;
+    
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      
+      .avatar-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      .user-info {
+        flex: 1;
+        
+        h2 {
+          font-size: 24px;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        
+        .user-meta {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 16px;
+          
+          .join-date {
+            font-size: 14px;
+            color: var(--text-secondary);
+          }
+        }
+        
+        .user-stats {
+          display: flex;
+          gap: 32px;
+          
+          .stat-item {
+            text-align: center;
+            
+            .stat-value {
+              display: block;
+              font-size: 20px;
+              font-weight: 600;
+              color: var(--primary-color);
+            }
+            
+            .stat-label {
+              font-size: 12px;
+              color: var(--text-secondary);
+            }
+          }
+        }
+      }
+      
+      .profile-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+  }
+  
+  .function-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+    
+    .function-item {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      &.active {
+        border-color: var(--primary-color);
+        
+        .function-icon {
+          color: var(--primary-color);
+        }
+      }
+      
+      .function-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        
+        .function-icon {
+          color: var(--text-secondary);
+        }
+        
+        .function-info {
+          flex: 1;
+          
+          h4 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+          }
+          
+          p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+          }
+        }
+        
+        .function-count {
+          font-size: 18px;
+          font-weight: 600;
+          color: var(--primary-color);
+        }
+      }
+    }
+  }
+  
+  .content-area {
+    .tab-content {
+      .content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        
+        h3 {
+          font-size: 20px;
+          font-weight: 600;
+        }
+      }
+      
+      .product-filters,
+      .order-filters {
+        margin-bottom: 20px;
+      }
+      
+      .products-list {
+        .product-item {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          background: white;
+          border-radius: 8px;
+          margin-bottom: 12px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          
+          .product-image {
+            img {
+              width: 80px;
+              height: 80px;
+              object-fit: cover;
+              border-radius: 8px;
+            }
+          }
+          
+          .product-info {
+            flex: 1;
+            
+            h4 {
+              font-size: 16px;
+              margin-bottom: 8px;
+            }
+            
+            .product-desc {
+              font-size: 14px;
+              color: var(--text-secondary);
+              margin-bottom: 8px;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+              overflow: hidden;
+            }
+            
+            .product-meta {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 8px;
+              
+              .price {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--danger-color);
+              }
+            }
+            
+            .product-stats {
+              display: flex;
+              gap: 16px;
+              font-size: 12px;
+              color: var(--text-secondary);
+            }
+          }
+          
+          .product-actions {
+            display: flex;
+            gap: 8px;
+          }
+        }
+      }
+      
+      .orders-list {
+        .order-item {
+          background: white;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          
+          .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            
+            .order-no {
+              font-size: 14px;
+              color: var(--text-secondary);
+            }
+          }
+          
+          .order-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            
+            .product-info {
+              display: flex;
+              gap: 12px;
+              flex: 1;
+              
+              img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover;
+                border-radius: 6px;
+              }
+              
+              .product-details {
+                h4 {
+                  font-size: 14px;
+                  margin-bottom: 4px;
+                }
+                
+                p {
+                  font-size: 12px;
+                  color: var(--text-secondary);
+                  margin-bottom: 8px;
+                }
+                
+                .price-info {
+                  .price {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--danger-color);
+                  }
+                  
+                  .quantity {
+                    margin-left: 8px;
+                    font-size: 12px;
+                    color: var(--text-secondary);
+                  }
+                }
+              }
+            }
+            
+            .order-actions {
+              display: flex;
+              gap: 8px;
+            }
+          }
+          
+          .order-footer {
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            
+            .order-time {
+              font-size: 12px;
+              color: var(--text-secondary);
+            }
+          }
+        }
+      }
+      
+      .favorites-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        
+        .favorite-item {
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          
+          .product-image {
+            position: relative;
+            
+            img {
+              width: 100%;
+              height: 150px;
+              object-fit: cover;
+            }
+            
+            .favorite-actions {
+              position: absolute;
+              top: 8px;
+              right: 8px;
+            }
+          }
+          
+          .product-info {
+            padding: 12px;
+            
+            h4 {
+              font-size: 14px;
+              margin-bottom: 8px;
+              cursor: pointer;
+              
+              &:hover {
+                color: var(--primary-color);
+              }
+            }
+            
+            .product-meta {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              
+              .price {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--danger-color);
+              }
+              
+              .time {
+                font-size: 12px;
+                color: var(--text-secondary);
+              }
+            }
+          }
+        }
+      }
+      
+      .settings-list {
+        .setting-item {
+          margin-bottom: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          
+          &:hover {
+            transform: translateX(4px);
+          }
+          
+          .setting-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            
+            .setting-icon {
+              font-size: 20px;
+              color: var(--text-secondary);
+            }
+            
+            .setting-info {
+              flex: 1;
+              
+              h4 {
+                font-size: 16px;
+                margin-bottom: 4px;
+              }
+              
+              p {
+                font-size: 12px;
+                color: var(--text-secondary);
+                margin: 0;
+              }
+            }
+            
+            .arrow-icon {
+              color: var(--text-placeholder);
+            }
+          }
+        }
+      }
+      
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        
+        .empty-icon {
+          font-size: 48px;
+          color: var(--text-placeholder);
+          margin-bottom: 16px;
+        }
+        
+        p {
+          font-size: 16px;
+          color: var(--text-secondary);
+          margin-bottom: 20px;
+        }
+      }
+    }
+  }
+  
+  .avatar-upload {
+    text-align: center;
+    
+    .upload-tip {
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .profile-page {
+    .profile-card {
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+        
+        .user-stats {
+          justify-content: center;
+        }
+      }
+    }
+    
+    .function-nav {
+      grid-template-columns: 1fr;
+    }
+    
+    .content-area {
+      .products-list {
+        .product-item {
+          flex-direction: column;
+          align-items: flex-start;
+          
+          .product-actions {
+            width: 100%;
+            justify-content: flex-end;
+          }
+        }
+      }
+      
+      .orders-list {
+        .order-item {
+          .order-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+            
+            .order-actions {
+              width: 100%;
+              justify-content: flex-end;
+            }
+          }
+        }
+      }
+      
+      .favorites-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+    }
+  }
+}
+</style>

@@ -45,4 +45,19 @@ public interface AuthService {
      * 用户登出
      */
     void logout(String token);
+
+    /**
+     * 获取当前用户信息
+     */
+    Object getCurrentUser(String token);
+
+    /**
+     * 学生身份认证申请
+     */
+    void verifyStudent(String token, com.campus.secondhand.controller.AuthController.StudentVerifyRequest request);
+
+    /**
+     * 获取认证状态
+     */
+    Object getVerifyStatus(String token);
 }

@@ -53,4 +53,46 @@ public class ProductController {
         }
         return Result.success(product);
     }
+
+    /**
+     * 获取当前用户的商品列表
+     *
+     * @param token 用户token
+     * @param page 页码，默认1
+     * @param size 每页大小，默认12
+     * @param status 商品状态过滤
+     * @return 用户商品分页数据
+     */
+    @GetMapping("/my")
+    public Result<Page<Product>> getMyProducts(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String status) {
+        try {
+            Page<Product> productPage = productService.getMyProducts(token, page, size, status);
+            return Result.success(productPage);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 创建商品
+     *
+     * @param product 商品信息
+     * @param token 用户token
+     * @return 创建结果
+     */
+    @PostMapping
+    public Result<Product> createProduct(
+            @RequestBody Product product,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Product createdProduct = productService.createProduct(product, token);
+            return Result.success(createdProduct);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

@@ -82,4 +82,52 @@ public class AuthController {
         return Result.success("退出成功");
     }
 
+    /**
+     * 获取当前用户信息
+     */
+    @GetMapping("/me")
+    public Result<?> getCurrentUser(@RequestHeader("Authorization") String token) {
+        return Result.success(authService.getCurrentUser(token));
+    }
+
+    /**
+     * 学生身份认证申请
+     */
+    @PostMapping("/verify-student")
+    public Result<?> verifyStudent(@RequestHeader("Authorization") String token, @RequestBody StudentVerifyRequest request) {
+        authService.verifyStudent(token, request);
+        return Result.success("认证申请提交成功");
+    }
+
+    /**
+     * 获取认证状态
+     */
+    @GetMapping("/verify-status")
+    public Result<?> getVerifyStatus(@RequestHeader("Authorization") String token) {
+        return Result.success(authService.getVerifyStatus(token));
+    }
+
+    /**
+     * 学生认证申请请求类
+     */
+    public static class StudentVerifyRequest {
+        private String realName;
+        private String idCard;
+        private String studentId;
+        private Long schoolId;
+        private java.util.List<String> verifyImages;
+
+        // Getters and Setters
+        public String getRealName() { return realName; }
+        public void setRealName(String realName) { this.realName = realName; }
+        public String getIdCard() { return idCard; }
+        public void setIdCard(String idCard) { this.idCard = idCard; }
+        public String getStudentId() { return studentId; }
+        public void setStudentId(String studentId) { this.studentId = studentId; }
+        public Long getSchoolId() { return schoolId; }
+        public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
+        public java.util.List<String> getVerifyImages() { return verifyImages; }
+        public void setVerifyImages(java.util.List<String> verifyImages) { this.verifyImages = verifyImages; }
+    }
+
 }

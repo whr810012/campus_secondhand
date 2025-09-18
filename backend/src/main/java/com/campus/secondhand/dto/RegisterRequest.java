@@ -35,5 +35,14 @@ public class RegisterRequest {
     @Size(max = 20, message = "昵称长度不能超过20位")
     private String nickname;
 
+    /**
+     * 学号
+     */
+    private String studentId;
+
+    /**
+     * 学校ID
+     */
+    private Long schoolId;
 
 }

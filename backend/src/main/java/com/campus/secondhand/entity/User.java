@@ -94,6 +94,16 @@ public class User {
     private String verifyReason;
 
     /**
+     * 身份证图片ID
+     */
+    private Long idCardImgId;
+
+    /**
+     * 学生证图片ID
+     */
+    private Long studentCardImgId;
+
+    /**
      * 信誉分数
      */
     private Integer creditScore;

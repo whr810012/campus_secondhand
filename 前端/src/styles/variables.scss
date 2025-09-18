@@ -1,0 +1,226 @@
+// 颜色变量
+:root {
+  // 主色调
+  --primary-color: #667eea;
+  --primary-light: #8fa4f3;
+  --primary-dark: #4c63d2;
+  
+  // 辅助色
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --info-color: #909399;
+  
+  // 文本颜色
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #c0c4cc;
+  
+  // 背景色
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-tertiary: #ebeef5;
+  
+  // 边框颜色
+  --border-color: #dcdfe6;
+  --border-color-light: #e4e7ed;
+  --border-color-lighter: #ebeef5;
+  --border-color-extra-light: #f2f6fc;
+  
+  // 阴影
+  --box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --box-shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+  --box-shadow-dark: 0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  
+  // 圆角
+  --border-radius-small: 2px;
+  --border-radius-base: 4px;
+  --border-radius-large: 8px;
+  --border-radius-round: 20px;
+  --border-radius-circle: 50%;
+  
+  // 字体大小
+  --font-size-extra-small: 12px;
+  --font-size-small: 13px;
+  --font-size-base: 14px;
+  --font-size-medium: 16px;
+  --font-size-large: 18px;
+  --font-size-extra-large: 20px;
+  
+  // 字体粗细
+  --font-weight-primary: 500;
+  --font-weight-secondary: 400;
+  
+  // 行高
+  --line-height-primary: 24px;
+  --line-height-base: 1.5;
+  
+  // 间距
+  --spacing-extra-small: 4px;
+  --spacing-small: 8px;
+  --spacing-base: 12px;
+  --spacing-medium: 16px;
+  --spacing-large: 20px;
+  --spacing-extra-large: 24px;
+  
+  // 组件尺寸
+  --component-size-large: 40px;
+  --component-size-default: 32px;
+  --component-size-small: 24px;
+  
+  // 过渡动画
+  --transition-duration: 0.3s;
+  --transition-function-ease-in-out-bezier: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --transition-function-fast-bezier: cubic-bezier(0.23, 1, 0.32, 1);
+  --transition-all: all var(--transition-duration) var(--transition-function-ease-in-out-bezier);
+  --transition-fade: opacity var(--transition-duration) var(--transition-function-fast-bezier);
+  --transition-md-fade: transform var(--transition-duration) var(--transition-function-fast-bezier), opacity var(--transition-duration) var(--transition-function-fast-bezier);
+  --transition-border: border-color var(--transition-duration) var(--transition-function-ease-in-out-bezier);
+  --transition-box-shadow: box-shadow var(--transition-duration) var(--transition-function-ease-in-out-bezier);
+  --transition-color: color var(--transition-duration) var(--transition-function-ease-in-out-bezier);
+  
+  // Z-index层级
+  --z-index-normal: 1;
+  --z-index-top: 1000;
+  --z-index-popper: 2000;
+  --z-index-message: 3000;
+  --z-index-loading: 4000;
+}
+
+// SCSS变量（用于计算和函数）
+$primary-color: #667eea;
+$primary-light: #8fa4f3;
+$primary-dark: #4c63d2;
+
+$success-color: #67c23a;
+$warning-color: #e6a23c;
+$danger-color: #f56c6c;
+$info-color: #909399;
+
+$text-primary: #303133;
+$text-regular: #606266;
+$text-secondary: #909399;
+$text-placeholder: #c0c4cc;
+
+$bg-primary: #ffffff;
+$bg-secondary: #f5f7fa;
+$bg-tertiary: #ebeef5;
+
+$border-color: #dcdfe6;
+$border-color-light: #e4e7ed;
+$border-color-lighter: #ebeef5;
+$border-color-extra-light: #f2f6fc;
+
+// 断点
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1920px;
+
+// Mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin multi-line-ellipsis($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin card-shadow {
+  box-shadow: var(--box-shadow-light);
+  transition: var(--transition-box-shadow);
+  
+  &:hover {
+    box-shadow: var(--box-shadow-dark);
+  }
+}
+
+@mixin button-hover($color: $primary-color) {
+  transition: var(--transition-all);
+  
+  &:hover {
+    background-color: lighten($color, 10%);
+    transform: translateY(-2px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// 响应式断点 Mixins
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: #{$breakpoint-xs - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == sm {
+    @media (max-width: #{$breakpoint-sm - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == md {
+    @media (max-width: #{$breakpoint-md - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == lg {
+    @media (max-width: #{$breakpoint-lg - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xl {
+    @media (max-width: #{$breakpoint-xl - 1px}) {
+      @content;
+    }
+  }
+}
+
+@mixin respond-above($breakpoint) {
+  @if $breakpoint == xs {
+    @media (min-width: #{$breakpoint-xs}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == sm {
+    @media (min-width: #{$breakpoint-sm}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == md {
+    @media (min-width: #{$breakpoint-md}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == lg {
+    @media (min-width: #{$breakpoint-lg}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xl {
+    @media (min-width: #{$breakpoint-xl}) {
+      @content;
+    }
+  }
+}

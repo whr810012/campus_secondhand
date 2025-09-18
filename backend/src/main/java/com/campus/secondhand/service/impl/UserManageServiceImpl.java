@@ -292,9 +292,8 @@ public class UserManageServiceImpl implements UserManageService {
 
             // 生成新密码
             String newPassword = generateRandomPassword();
-            String encodedPassword = passwordEncoder.encode(newPassword);
-
-            int result = userManageMapper.resetUserPassword(userId, encodedPassword);
+            // 直接使用明文密码，不再加密
+            int result = userManageMapper.resetUserPassword(userId, newPassword);
             if (result > 0) {
                 log.info("用户密码重置成功: userId={}", userId);
                 return newPassword;

@@ -1,6 +1,7 @@
 package com.campus.secondhand.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -76,6 +77,40 @@ public class Product {
      */
     @TableField(exist = false)
     private List<String> imageList;
+
+    /**
+     * 处理前端发送的images数组
+     * 将images数组映射到imageList字段
+     */
+    @JsonProperty("images")
+    public void setImagesFromArray(List<String> images) {
+        this.imageList = images;
+    }
+
+    /**
+     * 返回images数组给前端
+     */
+    @JsonProperty("images")
+    public List<String> getImagesAsArray() {
+        return this.imageList;
+    }
+
+    /**
+     * 处理前端发送的tags数组
+     * 将tags数组映射到tagList字段
+     */
+    @JsonProperty("tags")
+    public void setTagsFromArray(List<String> tags) {
+        this.tagList = tags;
+    }
+
+    /**
+     * 返回tags数组给前端
+     */
+    @JsonProperty("tags")
+    public List<String> getTagsAsArray() {
+        return this.tagList;
+    }
 
     /**
      * 商品状态：available-可售，reserved-已预定，sold-已售出，unavailable-已下架

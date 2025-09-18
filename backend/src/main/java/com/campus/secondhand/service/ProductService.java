@@ -28,4 +28,24 @@ public interface ProductService {
      * @return 商品信息
      */
     Product getProductById(Long id);
+
+    /**
+     * 获取当前用户的商品列表
+     *
+     * @param token 用户token
+     * @param page 页码
+     * @param size 每页大小
+     * @param status 商品状态过滤
+     * @return 用户商品分页数据
+     */
+    Page<Product> getMyProducts(String token, int page, int size, String status);
+
+    /**
+     * 创建商品
+     *
+     * @param product 商品信息
+     * @param token 用户token
+     * @return 创建的商品
+     */
+    Product createProduct(Product product, String token);
 }
