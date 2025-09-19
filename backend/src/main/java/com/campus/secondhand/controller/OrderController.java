@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.secondhand.common.Result;
 import com.campus.secondhand.entity.Order;
 import com.campus.secondhand.service.OrderService;
+import com.campus.secondhand.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,11 +14,12 @@ import org.springframework.web.bind.annotation.*;
  * @author campus-secondhand
  */
 @RestController
-@RequestMapping("/orders")
+@RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
+    private final JwtUtil jwtUtil;
 
     /**
      * 创建订单
@@ -54,16 +56,58 @@ public class OrderController {
     }
 
     /**
+     * 获取当前用户的订单（从token中解析用户ID）
+     *
+     * @param token Authorization header中的token
+     * @param page 页码
+     * @param size 每页大小
+     * @param status 订单状态
+     * @param keyword 关键词
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 订单分页数据
+     */
+    @GetMapping("/my")
+    public Result<Page<Order>> getMyOrders(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        // 从token中解析用户ID
+        Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+        if (userId == null) {
+            return Result.error("无效的token");
+        }
+        
+        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, "");
+        return Result.success(orders);
+    }
+
+    /**
      * 分页查询用户订单
+     *
+     * @param userId 用户ID
+     * @param page 页码
+     * @param size 每页大小
+     * @param status 订单状态
+     * @param keyword 关键词
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 订单分页数据
      */
     @GetMapping("/user/{userId}")
     public Result<Page<Order>> getUserOrders(
             @PathVariable Long userId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "") String status,
-            @RequestParam(defaultValue = "") String type) {
-        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, type);
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, "");
         return Result.success(orders);
     }
 

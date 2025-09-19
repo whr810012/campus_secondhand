@@ -1,7 +1,20 @@
 <template>
   <div class="product-detail-page">
     <div class="container">
-      <div v-loading="loading" class="product-detail">
+      <!-- 错误状态 -->
+      <div v-if="error && !loading" class="error-state">
+        <el-result
+          icon="error"
+          title="加载失败"
+          :sub-title="error"
+        >
+          <template #extra>
+            <el-button type="primary" @click="fetchProductDetail">重新加载</el-button>
+          </template>
+        </el-result>
+      </div>
+
+      <div v-else v-loading="loading" class="product-detail">
         <!-- 面包屑导航 -->
         <el-breadcrumb class="breadcrumb" separator=">">
           <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
@@ -15,21 +28,47 @@
           <!-- 左侧图片区域 -->
           <div class="product-images">
             <div class="main-image">
-              <img :src="currentImage" :alt="product.title" />
+              <el-image
+                :src="currentImage || getProductImage(product)"
+                :alt="product.title"
+                fit="cover"
+                :preview-src-list="productImages"
+                :initial-index="productImages.indexOf(currentImage)"
+                preview-teleported
+                loading="lazy"
+              >
+                <template #error>
+                  <div class="image-error">
+                    <el-icon><Picture /></el-icon>
+                    <span>图片加载失败</span>
+                  </div>
+                </template>
+              </el-image>
               <div v-if="product.isTop" class="top-badge">置顶</div>
               <div v-if="product.isRecommend" class="recommend-badge">推荐</div>
             </div>
             
-            <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
+            <div v-if="productImages.length > 1" class="image-thumbnails">
               <div
-                v-for="(image, index) in product.images"
-                :key="index"
-                class="thumbnail"
-                :class="{ active: currentImage === image }"
-                @click="currentImage = image"
-              >
-                <img :src="image" :alt="`商品图片${index + 1}`" />
-              </div>
+                  v-for="(image, index) in productImages"
+                  :key="index"
+                  class="thumbnail"
+                  :class="{ active: currentImage === image }"
+                  @click="currentImage = image"
+                >
+                  <el-image
+                    :src="image"
+                    :alt="`商品图片${index + 1}`"
+                    fit="cover"
+                    loading="lazy"
+                  >
+                    <template #error>
+                      <div class="thumbnail-error">
+                        <el-icon><Picture /></el-icon>
+                      </div>
+                    </template>
+                  </el-image>
+                </div>
             </div>
           </div>
           
@@ -66,7 +105,7 @@
               
               <div class="meta-item">
                 <span class="label">分类：</span>
-                <span class="value">{{ product.category?.name }}</span>
+                <span class="value">{{ categoryName }}</span>
               </div>
               
               <div class="meta-item">
@@ -85,10 +124,10 @@
               </div>
             </div>
             
-            <div v-if="product.tags && product.tags.length > 0" class="product-tags">
+            <div v-if="productTags.length > 0" class="product-tags">
               <span class="label">标签：</span>
               <el-tag
-                v-for="tag in product.tags"
+                v-for="tag in productTags"
                 :key="tag"
                 size="small"
                 type="info"
@@ -123,7 +162,7 @@
             </div>
             
             <!-- 购买操作 -->
-            <div v-if="product.status === 1" class="purchase-actions">
+            <div v-if="currentStatus === 1" class="purchase-actions">
               <el-button
                 type="primary"
                 size="large"
@@ -215,7 +254,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { Picture } from '@element-plus/icons-vue'
 import { getProductDetail, getRelatedProducts } from '@/api/product'
 import { addToFavorites, removeFromFavorites } from '@/api/favorite'
 import { useUserStore } from '@/stores/user'
@@ -228,6 +268,8 @@ const loading = ref(false)
 const product = ref({})
 const relatedProducts = ref([])
 const currentImage = ref('')
+const imageLoading = ref(false)
+const error = ref(null)
 const isFavorited = ref(false)
 const contactDialogVisible = ref(false)
 
@@ -235,23 +277,87 @@ const contactForm = reactive({
   message: ''
 })
 
+// 计算属性：获取商品图片列表
+const productImages = computed(() => {
+  return product.value?.imageList || product.value?.images || []
+})
+
+// 计算属性：获取当前商品状态数值
+const currentStatus = computed(() => {
+  return getStatusFromString(product.value?.status)
+})
+
+// 计算属性：获取商品标签
+const productTags = computed(() => {
+  return product.value?.tagList || product.value?.tags || []
+})
+
+// 计算属性：获取商品分类名称
+const categoryName = computed(() => {
+  return product.value?.category?.name || '未分类'
+})
+
 // 获取商品详情
 const fetchProductDetail = async () => {
   loading.value = true
+  error.value = null
   try {
     const productId = route.params.id
-    const response = await getProductDetail(productId)
-    product.value = response.data
     
-    if (product.value.images && product.value.images.length > 0) {
-      currentImage.value = product.value.images[0]
+    if (!productId) {
+      throw new Error('商品ID不存在')
+    }
+    
+    const response = await getProductDetail(productId)
+    
+    if (!response) {
+      throw new Error('获取商品详情失败')
+    }
+    
+    // 检查响应状态，200表示成功
+    if (response.code && response.code !== 200) {
+      throw new Error(response.message || '获取商品详情失败')
+    }
+    
+    // 根据API返回的数据结构进行数据映射
+    const rawData = response.data
+    
+    if (!rawData) {
+      throw new Error('商品数据不存在')
+    }
+    
+    product.value = {
+      ...rawData,
+      // 映射图片数据
+      images: rawData.imageList || rawData.images || [],
+      // 映射分类信息
+      category: rawData.category || { name: '未分类' },
+      // 映射卖家信息
+      seller: rawData.seller || {
+        id: rawData.sellerId,
+        nickname: '卖家',
+        avatar: '',
+        creditScore: 0,
+        dealCount: 0
+      },
+      // 映射标签
+      tags: rawData.tagList || rawData.tags || [],
+      // 确保状态为数字类型
+      status: getStatusFromString(rawData.status)
+    }
+    
+    // 设置当前显示的图片
+    const images = rawData.imageList || rawData.images || []
+    if (images.length > 0) {
+      currentImage.value = images[0]
     }
     
     // 获取相关推荐
     fetchRelatedProducts()
-  } catch (error) {
-    console.error('获取商品详情失败:', error)
-    ElMessage.error('获取商品详情失败')
+  } catch (err) {
+    console.error('获取商品详情失败:', err)
+    error.value = err.message || '获取商品详情失败'
+    ElMessage.error(error.value)
   } finally {
     loading.value = false
   }
@@ -269,8 +375,10 @@ const fetchRelatedProducts = async () => {
 
 // 获取商品图片
 const getProductImage = (images) => {
-  if (images && images.length > 0) {
-    return images[0]
+  // 处理不同的图片数据结构
+  const imageList = images?.imageList || images?.images || images || []
+  if (imageList && imageList.length > 0) {
+    return imageList[0]
   }
   return 'https://via.placeholder.com/300x200/f5f5f5/cccccc?text=暂无图片'
 }
@@ -294,8 +402,21 @@ const getConditionType = (condition) => {
   return 'danger'
 }
 
+// 将字符串状态转换为数字状态
+const getStatusFromString = (status) => {
+  const statusMap = {
+    'pending': 0,
+    'active': 1,
+    'sold': 2,
+    'inactive': 3,
+    'rejected': 4
+  }
+  return typeof status === 'string' ? statusMap[status.toLowerCase()] ?? 0 : status
+}
+
 // 获取状态文本
 const getStatusText = (status) => {
+  const numStatus = typeof status === 'string' ? getStatusFromString(status) : status
   const statusMap = {
     0: '审核中',
     1: '在售',
@@ -303,11 +424,12 @@ const getStatusText = (status) => {
     3: '已下架',
     4: '审核不通过'
   }
-  return statusMap[status] || '未知状态'
+  return statusMap[numStatus] || '未知状态'
 }
 
 // 获取状态类型
 const getStatusType = (status) => {
+  const numStatus = typeof status === 'string' ? getStatusFromString(status) : status
   const typeMap = {
     0: 'warning',
     1: 'success',
@@ -315,7 +437,7 @@ const getStatusType = (status) => {
     3: 'warning',
     4: 'error'
   }
-  return typeMap[status] || 'info'
+  return typeMap[numStatus] || 'info'
 }
 
 // 格式化日期
@@ -443,6 +565,15 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .product-detail-page {
+  .product-detail {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
+  
   .breadcrumb {
     margin-bottom: 20px;
   }
@@ -464,6 +595,12 @@ onMounted(() => {
           width: 100%;
           height: 400px;
           object-fit: cover;
+          transition: transform 0.3s ease;
+          cursor: zoom-in;
+          
+          &:hover {
+            transform: scale(1.02);
+          }
         }
         
         .top-badge,
@@ -697,7 +834,48 @@ onMounted(() => {
             color: var(--danger-color);
           }
         }
+        
+        .image-error {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: #909399;
+          background: #f5f7fa;
+          
+          .el-icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+          }
+          
+          span {
+            font-size: 14px;
+          }
+        }
       }
+      
+      .image-thumbnails {
+        .thumbnail {
+          .thumbnail-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #c0c4cc;
+            background: #f5f7fa;
+            
+            .el-icon {
+              font-size: 20px;
+            }
+          }
+        }
+      }
+    }
+    
+    .error-state {
+      margin: 40px 0;
+      text-align: center;
     }
   }
 }
@@ -705,6 +883,12 @@ onMounted(() => {
 // 响应式设计
 @media (max-width: 768px) {
   .product-detail-page {
+    .product-detail {
+      padding: 15px;
+      margin: 10px;
+      border-radius: 6px;
+    }
+    
     .product-content {
       grid-template-columns: 1fr;
       gap: 20px;

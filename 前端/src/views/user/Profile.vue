@@ -713,10 +713,8 @@ const updateProfile = async () => {
 }
 
 const handleAvatarSuccess = (response) => {
-  if (response.code === 200) {
-    previewAvatar.value = response.data.url
-    ElMessage.success('头像上传成功')
-  }
+  previewAvatar.value = response.data.url
+  ElMessage.success('头像上传成功')
 }
 
 const beforeAvatarUpload = (file) => {

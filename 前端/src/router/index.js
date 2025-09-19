@@ -13,6 +13,7 @@ const Home = () => import('@/views/user/Home.vue')
 const ProductDetail = () => import('@/views/user/ProductDetail.vue')
 const PublishProduct = () => import('@/views/user/PublishProduct.vue')
 const Profile = () => import('@/views/user/Profile.vue')
+const UserProfile = () => import('@/views/user/UserProfile.vue')
 const Verification = () => import('@/views/user/Verification.vue')
 const MyProducts = () => import('@/views/user/MyProducts.vue')
 const MyOrders = () => import('@/views/user/MyOrders.vue')
@@ -77,6 +78,12 @@ const routes = [
         name: 'Profile',
         component: Profile,
         meta: { title: '个人中心', requiresAuth: true }
+      },
+      {
+        path: 'user/:id',
+        name: 'UserProfile',
+        component: UserProfile,
+        meta: { title: '用户详情' }
       },
       {
         path: 'verification',

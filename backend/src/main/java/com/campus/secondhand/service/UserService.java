@@ -41,4 +41,22 @@ public interface UserService {
      * @return 用户统计信息
      */
     com.campus.secondhand.controller.UserController.UserStats getUserStats(String token);
+
+    /**
+     * 获取指定用户的公开信息
+     *
+     * @param userId 用户ID
+     * @return 用户公开信息
+     */
+    User getUserProfile(Long userId);
+
+    /**
+     * 获取指定用户的商品列表
+     *
+     * @param userId 用户ID
+     * @param page 页码
+     * @param size 每页大小
+     * @return 商品分页数据
+     */
+    Object getUserProducts(Long userId, int page, int size);
 }

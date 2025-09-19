@@ -118,4 +118,23 @@ public class ProductController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 获取相关商品推荐
+     *
+     * @param id 商品ID
+     * @param size 推荐数量，默认6
+     * @return 相关商品列表
+     */
+    @GetMapping("/{id}/related")
+    public Result<Page<Product>> getRelatedProducts(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "6") int size) {
+        try {
+            Page<Product> relatedProducts = productService.getRelatedProducts(id, size);
+            return Result.success(relatedProducts);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

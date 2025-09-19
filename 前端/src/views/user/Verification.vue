@@ -275,7 +275,7 @@ const checkVerificationStatus = async () => {
     // 调用API检查认证状态
     const response = await getVerifyStatus()
     
-    if (response.code === 200 && response.data) {
+    if (response.data) {
       const { status, realName, studentId, schoolName, major, rejectionReason } = response.data
       
       // 根据数据库字段含义处理状态
@@ -360,21 +360,13 @@ const handleIdCardPreview = () => {
 }
 
 const handleStudentCardSuccess = (response) => {
-  if (response.code === 200) {
-    verificationForm.studentCardImage = response.data.base64
-    ElMessage.success('学生证照片上传成功')
-  } else {
-    ElMessage.error(response.message || '上传失败')
-  }
+  verificationForm.studentCardImage = response.data.base64
+  ElMessage.success('学生证照片上传成功')
 }
 
 const handleIdCardSuccess = (response) => {
-  if (response.code === 200) {
-    verificationForm.idCardImage = response.data.base64
-    ElMessage.success('身份证照片上传成功')
-  } else {
-    ElMessage.error(response.message || '上传失败')
-  }
+  verificationForm.idCardImage = response.data.base64
+  ElMessage.success('身份证照片上传成功')
 }
 
 const handleUploadError = (error) => {

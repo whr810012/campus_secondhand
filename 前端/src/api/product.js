@@ -86,10 +86,19 @@ export const getCategoryTree = () => {
   })
 }
 
-// 根据父分类ID获取子分类
+// 根据父级ID获取分类
 export const getCategoriesByParent = (parentId) => {
   return request({
     url: `/categories/parent/${parentId}`,
     method: 'get'
+  })
+}
+
+// 获取相关商品推荐
+export const getRelatedProducts = (productId, params = {}) => {
+  return request({
+    url: `/products/${productId}/related`,
+    method: 'get',
+    params
   })
 }

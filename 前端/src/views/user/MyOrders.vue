@@ -193,7 +193,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { getUserOrders, payOrder as payOrderApi, cancelOrder as cancelOrderApi, confirmReceipt as confirmReceiptApi, reviewOrder as reviewOrderApi } from '@/api/order'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
+
+// 用户store
+const userStore = useUserStore()
 
 // 响应式数据
 const loading = ref(false)
@@ -221,10 +225,10 @@ const fetchOrders = async () => {
     const params = {
       page: currentPage.value,
       size: pageSize.value,
-      status: activeTab.value === 'all' ? undefined : activeTab.value,
+      status: activeTab.value === 'all' ? '' : activeTab.value,
       keyword: searchKeyword.value,
-      start_date: dateRange.value?.[0],
-      end_date: dateRange.value?.[1]
+      startDate: dateRange.value?.[0] || '',
+      endDate: dateRange.value?.[1] || ''
     }
     
     const response = await getUserOrders(params)

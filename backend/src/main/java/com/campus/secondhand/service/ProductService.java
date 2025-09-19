@@ -57,4 +57,24 @@ public interface ProductService {
      * @return 删除结果
      */
     boolean deleteProduct(Long productId, Long userId);
+
+    /**
+     * 获取相关商品推荐
+     *
+     * @param productId 商品ID
+     * @param size 推荐数量
+     * @return 相关商品分页数据
+     */
+    Page<Product> getRelatedProducts(Long productId, int size);
+
+    /**
+     * 根据用户ID获取用户的商品列表
+     *
+     * @param userId 用户ID
+     * @param page 页码
+     * @param size 每页大小
+     * @param status 商品状态过滤
+     * @return 用户商品分页数据
+     */
+    Page<Product> getUserProducts(Long userId, int page, int size, String status);
 }

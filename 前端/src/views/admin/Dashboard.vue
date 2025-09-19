@@ -6,7 +6,7 @@
     </div>
     
     <!-- 数据概览卡片 -->
-    <div class="stats-grid">
+    <div class="stats-grid" v-loading="loading.stats">
       <div class="stat-card">
         <div class="stat-icon user-icon">
           <el-icon><User /></el-icon>
@@ -65,7 +65,7 @@
     </div>
     
     <!-- 图表区域 -->
-    <div class="charts-grid">
+    <div class="charts-grid" v-loading="loading.charts">
       <!-- 用户增长趋势 -->
       <div class="chart-card">
         <div class="chart-header">
@@ -98,7 +98,7 @@
             查看全部
           </el-link>
         </div>
-        <el-table :data="recentUsers" style="width: 100%" size="small">
+        <el-table :data="recentUsers" style="width: 100%" size="small" v-loading="loading.users">
           <el-table-column prop="avatar" label="头像" width="60">
             <template #default="{ row }">
               <el-avatar :src="row.avatar" :size="32">
@@ -132,7 +132,7 @@
             查看全部
           </el-link>
         </div>
-        <el-table :data="pendingProducts" style="width: 100%" size="small">
+        <el-table :data="pendingProducts" style="width: 100%" size="small" v-loading="loading.products">
           <el-table-column prop="image" label="图片" width="60">
             <template #default="{ row }">
               <el-image
@@ -156,10 +156,10 @@
           </el-table-column>
           <el-table-column label="操作" width="120">
             <template #default="{ row }">
-              <el-button type="success" size="small" @click="approveProduct(row.id)">
+              <el-button type="success" size="small" @click="handleApproveProduct(row.id)">
                 通过
               </el-button>
-              <el-button type="danger" size="small" @click="rejectProduct(row.id)">
+              <el-button type="danger" size="small" @click="handleRejectProduct(row.id)">
                 拒绝
               </el-button>
             </template>
@@ -211,11 +211,24 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import * as echarts from 'echarts'
+import {
+  getDashboardStats,
+  getUserStats,
+  getProductStats,
+  getOrderStats,
+  getRecentUsers,
+  getPendingProducts,
+  getCategoryStats,
+  getSystemStatus,
+  getUserGrowthTrend,
+  approveProduct,
+  rejectProduct
+} from '@/api/admin'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -229,74 +242,35 @@ let categoryChart = null
 
 // 统计数据
 const stats = reactive({
-  userCount: 1248,
-  userGrowth: 12.5,
-  productCount: 3567,
-  productGrowth: 8.3,
-  orderCount: 892,
-  orderGrowth: 15.7,
-  revenue: 156780,
-  revenueGrowth: 22.1
+  userCount: 0,
+  userGrowth: 0,
+  productCount: 0,
+  productGrowth: 0,
+  orderCount: 0,
+  orderGrowth: 0,
+  revenue: 0,
+  revenueGrowth: 0
+})
+
+// 加载状态
+const loading = reactive({
+  stats: false,
+  users: false,
+  products: false,
+  charts: false
 })
 
 // 最新用户
-const recentUsers = ref([
-  {
-    id: 1,
-    avatar: '',
-    nickname: '张同学',
-    phone: '138****5678',
-    school: '北京大学',
-    status: 1,
-    createdAt: '2024-01-15 10:30:00'
-  },
-  {
-    id: 2,
-    avatar: '',
-    nickname: '李同学',
-    phone: '139****1234',
-    school: '清华大学',
-    status: 1,
-    createdAt: '2024-01-15 09:15:00'
-  },
-  {
-    id: 3,
-    avatar: '',
-    nickname: '王同学',
-    phone: '136****9876',
-    school: '复旦大学',
-    status: 1,
-    createdAt: '2024-01-15 08:45:00'
-  }
-])
+const recentUsers = ref([])
 
 // 待审核商品
-const pendingProducts = ref([
-  {
-    id: 1,
-    title: 'iPhone 14 Pro 256GB 深空黑',
-    price: 7999,
-    images: ['/images/products/iphone.jpg'],
-    seller: '张同学',
-    createdAt: '2024-01-15 11:20:00'
-  },
-  {
-    id: 2,
-    title: 'MacBook Air M2 13英寸',
-    price: 8999,
-    images: ['/images/products/macbook.jpg'],
-    seller: '李同学',
-    createdAt: '2024-01-15 10:45:00'
-  },
-  {
-    id: 3,
-    title: '小米13 Ultra 512GB',
-    price: 5499,
-    images: ['/images/products/xiaomi.jpg'],
-    seller: '王同学',
-    createdAt: '2024-01-15 09:30:00'
-  }
-])
+const pendingProducts = ref([])
+
+// 图表数据
+const chartData = reactive({
+  userGrowth: [],
+  categoryDistribution: []
+})
 
 // 系统状态
 const systemStatus = reactive({
@@ -313,6 +287,15 @@ const initUserChart = () => {
   if (!userChartRef.value) return
   
   userChart = echarts.init(userChartRef.value)
+  updateUserChart()
+}
+
+// 更新用户增长图表
+const updateUserChart = () => {
+  if (!userChart) return
+  
+  const dates = chartData.userGrowth.map(item => item.date)
+  const counts = chartData.userGrowth.map(item => item.count)
   
   const option = {
     tooltip: {
@@ -329,7 +312,7 @@ const initUserChart = () => {
     },
     xAxis: {
       type: 'category',
-      data: ['01-09', '01-10', '01-11', '01-12', '01-13', '01-14', '01-15']
+      data: dates
     },
     yAxis: {
       type: 'value'
@@ -339,7 +322,7 @@ const initUserChart = () => {
         name: '新增用户',
         type: 'line',
         smooth: true,
-        data: [23, 45, 67, 34, 78, 56, 89],
+        data: counts,
         itemStyle: {
           color: '#667eea'
         },
@@ -374,6 +357,18 @@ const initCategoryChart = () => {
   if (!categoryChartRef.value) return
   
   categoryChart = echarts.init(categoryChartRef.value)
+  updateCategoryChart()
+}
+
+// 更新分类分布图表
+const updateCategoryChart = () => {
+  if (!categoryChart) return
+  
+  const categories = chartData.categoryDistribution.map(item => item.name)
+  const data = chartData.categoryDistribution.map(item => ({
+    value: item.count,
+    name: item.name
+  }))
   
   const option = {
     tooltip: {
@@ -382,7 +377,8 @@ const initCategoryChart = () => {
     },
     legend: {
       orient: 'vertical',
-      left: 'left'
+      left: 'left',
+      data: categories
     },
     series: [
       {
@@ -404,14 +400,7 @@ const initCategoryChart = () => {
         labelLine: {
           show: false
         },
-        data: [
-          { value: 335, name: '数码产品' },
-          { value: 310, name: '图书教材' },
-          { value: 234, name: '生活用品' },
-          { value: 135, name: '服装配饰' },
-          { value: 148, name: '运动户外' },
-          { value: 89, name: '其他' }
-        ],
+        data: data,
         itemStyle: {
           color: function(params) {
             const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b']
@@ -436,87 +425,145 @@ const formatDate = (dateStr) => {
   return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
-// 审核商品通过
-const approveProduct = async (productId) => {
+// 审核商品
+const handleApproveProduct = async (id) => {
   try {
-    // 调用审核通过接口
+    await approveProduct(id)
     ElMessage.success('商品审核通过')
-    // 刷新待审核商品列表
-    fetchPendingProducts()
+    // 从待审核列表中移除
+    const index = pendingProducts.value.findIndex(item => item.id === id)
+    if (index > -1) {
+      pendingProducts.value.splice(index, 1)
+    }
+    // 刷新统计数据
+    await fetchStats()
   } catch (error) {
-    console.error('审核失败:', error)
-    ElMessage.error('审核失败')
+    console.error('审核通过失败:', error)
+    ElMessage.error('审核操作失败')
   }
 }
 
-// 审核商品拒绝
-const rejectProduct = async (productId) => {
+const handleRejectProduct = async (id) => {
   try {
-    // 调用审核拒绝接口
+    await rejectProduct(id)
     ElMessage.success('商品审核拒绝')
-    // 刷新待审核商品列表
-    fetchPendingProducts()
+    // 从待审核列表中移除
+    const index = pendingProducts.value.findIndex(item => item.id === id)
+    if (index > -1) {
+      pendingProducts.value.splice(index, 1)
+    }
+    // 刷新统计数据
+    await fetchStats()
   } catch (error) {
-    console.error('审核失败:', error)
-    ElMessage.error('审核失败')
+    console.error('审核拒绝失败:', error)
+    ElMessage.error('审核操作失败')
   }
 }
 
 // 获取统计数据
 const fetchStats = async () => {
   try {
-    // 调用统计数据接口
-    // const response = await getStats()
-    // stats.value = response.data
+    loading.stats = true
+    const response = await getDashboardStats()
+    if (response && response.data) {
+      Object.assign(stats, response.data)
+    }
   } catch (error) {
     console.error('获取统计数据失败:', error)
+    ElMessage.error('获取统计数据失败')
+  } finally {
+    loading.stats = false
   }
 }
 
 // 获取最新用户
 const fetchRecentUsers = async () => {
   try {
-    // 调用最新用户接口
-    // const response = await getRecentUsers()
-    // recentUsers.value = response.data
+    loading.users = true
+    const response = await getRecentUsers()
+    if (response && response.data) {
+      recentUsers.value = response.data
+    }
   } catch (error) {
     console.error('获取最新用户失败:', error)
+    ElMessage.error('获取最新用户失败')
+  } finally {
+    loading.users = false
   }
 }
 
 // 获取待审核商品
 const fetchPendingProducts = async () => {
   try {
-    // 调用待审核商品接口
-    // const response = await getPendingProducts()
-    // pendingProducts.value = response.data
+    loading.products = true
+    const response = await getPendingProducts()
+    if (response && response.data) {
+      pendingProducts.value = response.data
+    }
   } catch (error) {
     console.error('获取待审核商品失败:', error)
+    ElMessage.error('获取待审核商品失败')
+  } finally {
+    loading.products = false
   }
 }
 
 // 获取系统状态
 const fetchSystemStatus = async () => {
   try {
-    // 调用系统状态接口
-    // const response = await getSystemStatus()
-    // Object.assign(systemStatus, response.data)
+    const response = await getSystemStatus()
+    if (response && response.data) {
+      Object.assign(systemStatus, response.data)
+    }
   } catch (error) {
     console.error('获取系统状态失败:', error)
+    ElMessage.error('获取系统状态失败')
+  }
+}
+
+// 获取图表数据
+const fetchChartData = async () => {
+  try {
+    loading.charts = true
+    
+    // 获取用户增长趋势
+    const userGrowthResponse = await getUserGrowthTrend()
+    if (userGrowthResponse && userGrowthResponse.data) {
+      chartData.userGrowth = userGrowthResponse.data
+      updateUserChart()
+    }
+    
+    // 获取分类统计
+    const categoryResponse = await getCategoryStats()
+    if (categoryResponse && categoryResponse.data) {
+      chartData.categoryDistribution = categoryResponse.data
+      updateCategoryChart()
+    }
+  } catch (error) {
+    console.error('获取图表数据失败:', error)
+    ElMessage.error('获取图表数据失败')
+  } finally {
+    loading.charts = false
   }
 }
 
 // 组件挂载时初始化
 onMounted(async () => {
-  await fetchStats()
-  await fetchRecentUsers()
-  await fetchPendingProducts()
-  await fetchSystemStatus()
+  // 获取数据
+  await Promise.all([
+    fetchStats(),
+    fetchRecentUsers(),
+    fetchPendingProducts(),
+    fetchSystemStatus()
+  ])
   
-  // 等待DOM更新后初始化图表
+  // 初始化图表
   await nextTick()
   initUserChart()
   initCategoryChart()
+  
+  // 获取图表数据
+  await fetchChartData()
   
   // 监听窗口大小变化
   window.addEventListener('resize', () => {

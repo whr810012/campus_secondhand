@@ -4,8 +4,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.secondhand.common.Result;
 import com.campus.secondhand.entity.Product;
 import com.campus.secondhand.service.FavoriteService;
+import com.campus.secondhand.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * 收藏控制器
@@ -18,14 +21,22 @@ import org.springframework.web.bind.annotation.*;
 public class FavoriteController {
 
     private final FavoriteService favoriteService;
+    private final JwtUtil jwtUtil;
 
     /**
      * 添加收藏
      */
     @PostMapping
-    public Result<Void> addFavorite(@RequestBody FavoriteRequest request) {
+    public Result<Void> addFavorite(@RequestBody FavoriteRequest request, HttpServletRequest httpRequest) {
         try {
-            boolean success = favoriteService.addFavorite(request.getUserId(), request.getProductId());
+            // 从token中获取用户ID
+            String token = httpRequest.getHeader("Authorization");
+            Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+            
+            boolean success = favoriteService.addFavorite(userId, request.getProductId());
             if (success) {
                 return Result.success();
             } else {
@@ -40,8 +51,15 @@ public class FavoriteController {
      * 取消收藏
      */
     @DeleteMapping
-    public Result<Void> removeFavorite(@RequestParam Long userId, @RequestParam Long productId) {
+    public Result<Void> removeFavorite(@RequestParam Long productId, HttpServletRequest httpRequest) {
         try {
+            // 从token中获取用户ID
+            String token = httpRequest.getHeader("Authorization");
+            Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+            
             boolean success = favoriteService.removeFavorite(userId, productId);
             if (success) {
                 return Result.success();
@@ -57,9 +75,20 @@ public class FavoriteController {
      * 检查是否已收藏
      */
     @GetMapping("/check")
-    public Result<Boolean> checkFavorite(@RequestParam Long userId, @RequestParam Long productId) {
-        boolean isFavorited = favoriteService.isFavorited(userId, productId);
-        return Result.success(isFavorited);
+    public Result<Boolean> checkFavorite(@RequestParam Long productId, HttpServletRequest httpRequest) {
+        try {
+            // 从token中获取用户ID
+            String token = httpRequest.getHeader("Authorization");
+            Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+            
+            boolean isFavorited = favoriteService.isFavorited(userId, productId);
+            return Result.success(isFavorited);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**

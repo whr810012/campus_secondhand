@@ -69,6 +69,34 @@ public class UserController {
         }
     }
 
+    /**
+     * 获取指定用户的公开信息
+     */
+    @GetMapping("/profile/{userId}")
+    public Result<User> getUserProfile(@PathVariable Long userId) {
+        try {
+            User user = userService.getUserProfile(userId);
+            return Result.success(user);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取指定用户的商品列表
+     */
+    @GetMapping("/{userId}/products")
+    public Result<?> getUserProducts(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            return Result.success(userService.getUserProducts(userId, page, size));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     public static class ChangePasswordRequest {
         private String oldPassword;
         private String newPassword;

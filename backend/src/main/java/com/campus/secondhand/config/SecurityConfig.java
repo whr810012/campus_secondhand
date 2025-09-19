@@ -54,7 +54,10 @@ public class SecurityConfig {
                 .antMatchers("/schools/**").permitAll()
                 // 允许访问商品接口
                 .antMatchers("/products/**").permitAll()
-                // 用户相关接口需要认证
+                // 允许访问用户公开信息接口
+                .antMatchers("/user/profile/**").permitAll()
+                .antMatchers("/user/*/products").permitAll()
+                // 其他用户相关接口需要认证
                 .antMatchers("/user/**").authenticated()
                 // 其他请求需要认证
                 .anyRequest().authenticated()

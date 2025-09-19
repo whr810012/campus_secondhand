@@ -71,7 +71,6 @@ public class ImgServiceImpl extends ServiceImpl<ImgMapper, Img> implements ImgSe
         
         // 逻辑删除
         img.setStatus(0);
-        img.setDeleted(1);
         boolean updated = updateById(img);
         
         if (updated) {

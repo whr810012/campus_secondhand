@@ -348,12 +348,8 @@ const buildCategoryTree = (categories) => {
 
 // 上传成功回调
 const handleUploadSuccess = (response, file) => {
-  if (response.code === 200) {
-    form.images.push(response.data.base64)
-    ElMessage.success('图片上传成功')
-  } else {
-    ElMessage.error(response.message || '图片上传失败')
-  }
+  form.images.push(response.data.base64)
+  ElMessage.success('图片上传成功')
 }
 
 // 上传失败回调

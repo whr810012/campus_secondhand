@@ -221,6 +221,46 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public Page<Product> getUserProducts(Long userId, int page, int size, String status) {
+        log.info("开始获取用户商品列表: userId={}, page={}, size={}, status={}", userId, page, size, status);
+        try {
+            Page<Product> pageParam = new Page<>(page, size);
+            LambdaQueryWrapper<Product> queryWrapper = new LambdaQueryWrapper<>();
+            
+            // 查询指定用户的商品
+            queryWrapper.eq(Product::getSellerId, userId);
+            
+            // 只查询未删除的商品
+            queryWrapper.eq(Product::getDeleted, 0);
+            
+            // 状态过滤 - 映射前端状态值到数据库状态值
+            if (StringUtils.hasText(status)) {
+                String dbStatus = mapFrontendStatusToDb(status);
+                if (dbStatus != null) {
+                    queryWrapper.eq(Product::getStatus, dbStatus);
+                }
+            }
+            
+            // 按创建时间倒序
+            queryWrapper.orderByDesc(Product::getCreatedAt);
+            
+            Page<Product> result = productMapper.selectPage(pageParam, queryWrapper);
+            
+            // 为每个商品加载图片数据
+            if (result.getRecords() != null) {
+                for (Product product : result.getRecords()) {
+                    loadProductData(product);
+                }
+            }
+            
+            return result;
+        } catch (Exception e) {
+            log.error("获取用户商品列表失败: userId={}, error={}", userId, e.getMessage());
+            throw new RuntimeException("获取用户商品列表失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     @Transactional
     public Product createProduct(Product product, String token) {
         try {
@@ -345,6 +385,78 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             log.error("删除商品异常: productId={}, userId={}, error={}", productId, userId, e.getMessage(), e);
             return false;
+        }
+    }
+
+    @Override
+    public Page<Product> getRelatedProducts(Long productId, int size) {
+        try {
+            log.info("开始获取相关商品推荐: productId={}, size={}", productId, size);
+            
+            // 获取当前商品信息
+            Product currentProduct = productMapper.selectById(productId);
+            if (currentProduct == null) {
+                log.warn("商品不存在: productId={}", productId);
+                return new Page<>(1, size);
+            }
+            
+            Page<Product> pageParam = new Page<>(1, size);
+            LambdaQueryWrapper<Product> queryWrapper = new LambdaQueryWrapper<>();
+            
+            // 排除当前商品
+            queryWrapper.ne(Product::getId, productId);
+            
+            // 只查询未删除且在售的商品
+            queryWrapper.eq(Product::getDeleted, 0)
+                        .eq(Product::getStatus, "ACTIVE");
+            
+            // 优先推荐同分类的商品
+            if (currentProduct.getCategoryId() != null) {
+                queryWrapper.eq(Product::getCategoryId, currentProduct.getCategoryId());
+            }
+            
+            // 按创建时间倒序排列
+            queryWrapper.orderByDesc(Product::getCreatedAt);
+            
+            Page<Product> relatedProducts = productMapper.selectPage(pageParam, queryWrapper);
+            
+            // 如果同分类商品不足，补充其他商品
+            if (relatedProducts.getRecords().size() < size) {
+                int remainingSize = size - relatedProducts.getRecords().size();
+                LambdaQueryWrapper<Product> fallbackWrapper = new LambdaQueryWrapper<>();
+                
+                fallbackWrapper.ne(Product::getId, productId)
+                              .eq(Product::getDeleted, 0)
+                              .eq(Product::getStatus, "ACTIVE");
+                
+                // 排除已经获取的商品
+                if (!relatedProducts.getRecords().isEmpty()) {
+                    List<Long> excludeIds = new ArrayList<>();
+                    excludeIds.add(productId);
+                    relatedProducts.getRecords().forEach(p -> excludeIds.add(p.getId()));
+                    fallbackWrapper.notIn(Product::getId, excludeIds);
+                }
+                
+                fallbackWrapper.orderByDesc(Product::getCreatedAt);
+                
+                Page<Product> fallbackPage = new Page<>(1, remainingSize);
+                Page<Product> fallbackProducts = productMapper.selectPage(fallbackPage, fallbackWrapper);
+                
+                // 合并结果
+                relatedProducts.getRecords().addAll(fallbackProducts.getRecords());
+            }
+            
+            // 加载商品数据
+            for (Product product : relatedProducts.getRecords()) {
+                loadProductData(product);
+            }
+            
+            log.info("获取相关商品推荐完成: productId={}, 推荐数量={}", productId, relatedProducts.getRecords().size());
+            return relatedProducts;
+            
+        } catch (Exception e) {
+            log.error("获取相关商品推荐异常: productId={}, error={}", productId, e.getMessage(), e);
+            return new Page<>(1, size);
         }
     }
 }
