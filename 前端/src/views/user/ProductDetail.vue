@@ -245,7 +245,7 @@
       
       <template #footer>
         <el-button @click="contactDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="sendMessage">发送</el-button>
+        <el-button type="primary" @click="sendContactMessage">发送</el-button>
       </template>
     </el-dialog>
   </div>
@@ -254,10 +254,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import { getProductDetail, getRelatedProducts } from '@/api/product'
 import { addToFavorites, removeFromFavorites } from '@/api/favorite'
+import { sendMessage } from '@/api/message'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
@@ -487,7 +488,7 @@ const handleContact = () => {
     return
   }
   
-  if (product.value.seller?.id === userStore.user?.id) {
+  if (product.value.seller?.id === userStore.userInfo?.id) {
     ElMessage.warning('不能联系自己')
     return
   }
@@ -496,17 +497,40 @@ const handleContact = () => {
 }
 
 // 发送消息
-const sendMessage = async () => {
+const sendContactMessage = async () => {
   if (!contactForm.message.trim()) {
     ElMessage.warning('请输入留言内容')
     return
   }
   
   try {
-    // TODO: 调用发送消息API
+    const messageData = {
+      senderId: userStore.userInfo.id,
+      receiverId: product.value.seller.id,
+      productId: product.value.id,
+      content: contactForm.message,
+      type: 'text'
+    }
+    
+    await sendMessage(messageData)
     ElMessage.success('消息发送成功')
     contactDialogVisible.value = false
     contactForm.message = ''
+    
+    // 询问是否跳转到聊天页面
+    ElMessageBox.confirm(
+      '消息发送成功，是否前往聊天页面继续对话？',
+      '提示',
+      {
+        confirmButtonText: '前往聊天',
+        cancelButtonText: '稍后再说',
+        type: 'success'
+      }
+    ).then(() => {
+      router.push('/chat')
+    }).catch(() => {
+      // 用户选择稍后再说，不做任何操作
+    })
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败')
@@ -526,7 +550,7 @@ const handlePurchase = () => {
     return
   }
   
-  if (product.value.seller?.id === userStore.user?.id) {
+  if (product.value.seller?.id === userStore.userInfo?.id) {
     ElMessage.warning('不能购买自己的商品')
     return
   }
@@ -543,7 +567,7 @@ const handleAddToCart = () => {
     return
   }
   
-  if (product.value.seller?.id === userStore.user?.id) {
+  if (product.value.seller?.id === userStore.userInfo?.id) {
     ElMessage.warning('不能购买自己的商品')
     return
   }

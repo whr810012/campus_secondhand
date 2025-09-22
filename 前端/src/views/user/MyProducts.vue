@@ -162,7 +162,8 @@ const fetchProducts = async () => {
     }
     
     const response = await getUserProducts(params)
-    products.value = response.data.items || []
+    // MyBatis Plus Page对象结构：records为数据列表
+    products.value = response.data.records || []
     total.value = response.data.total || 0
   } catch (error) {
     console.error('获取商品列表失败:', error)

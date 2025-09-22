@@ -19,6 +19,7 @@ const MyProducts = () => import('@/views/user/MyProducts.vue')
 const MyOrders = () => import('@/views/user/MyOrders.vue')
 const MyFavorites = () => import('@/views/user/MyFavorites.vue')
 const Messages = () => import('@/views/user/Messages.vue')
+const Chat = () => import('@/views/user/Chat.vue')
 const OrderDetail = () => import('@/views/user/OrderDetail.vue')
 
 // 认证页面
@@ -114,6 +115,12 @@ const routes = [
         name: 'Messages',
         component: Messages,
         meta: { title: '消息中心', requiresAuth: true }
+      },
+      {
+        path: 'chat',
+        name: 'Chat',
+        component: Chat,
+        meta: { title: '聊天', requiresAuth: true }
       },
       {
         path: 'order/:id',

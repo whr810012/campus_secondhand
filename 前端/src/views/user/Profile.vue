@@ -253,6 +253,15 @@
         <div v-if="activeTab === 'favorites'" class="tab-content">
           <div class="content-header">
             <h3>我的收藏</h3>
+            <div class="header-actions">
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click="$router.push('/user/favorites')"
+              >
+                查看全部
+              </el-button>
+            </div>
           </div>
           
           <div v-loading="loading.favorites" class="favorites-grid">
@@ -261,14 +270,17 @@
               :key="item.id"
               class="favorite-item"
             >
-              <div class="product-image">
-                <img :src="getProductImage(item.product?.images)" :alt="item.product?.title" />
-                <div class="favorite-actions">
+              <div class="product-image" @click="viewProduct(item.id)">
+                <img :src="getProductImage(item.images)" :alt="item.title" />
+                <div class="product-status" v-if="item.status !== 'available'">
+                  {{ getStatusText(item.status, item.auditStatus) }}
+                </div>
+                <div class="favorite-actions" @click.stop>
                   <el-button
                     size="small"
                     type="danger"
                     circle
-                    @click="removeFavorite(item.id)"
+                    @click="removeFavoriteItem(item.id)"
                   >
                     <el-icon><Delete /></el-icon>
                   </el-button>
@@ -276,17 +288,32 @@
               </div>
               
               <div class="product-info">
-                <h4 @click="viewProduct(item.product?.id)">{{ item.product?.title }}</h4>
+                <h4 class="product-title" @click="viewProduct(item.id)">{{ item.title }}</h4>
                 <div class="product-meta">
-                  <span class="price">¥{{ item.product?.price }}</span>
-                  <span class="time">{{ formatDate(item.createdAt) }}</span>
+                  <span class="price">¥{{ item.price }}</span>
+                  <span class="original-price" v-if="item.originalPrice && item.originalPrice > item.price">
+                    ¥{{ item.originalPrice }}
+                  </span>
                 </div>
+                <div class="product-details">
+                  <span class="condition">{{ getConditionText(item.condition) }}</span>
+                  <span class="views">
+                    <el-icon><View /></el-icon>
+                    {{ item.viewCount || 0 }}
+                  </span>
+                  <span class="favorites">
+                    <el-icon><Star /></el-icon>
+                    {{ item.favoriteCount || 0 }}
+                  </span>
+                </div>
+                <div class="favorite-time">收藏于 {{ formatDate(item.createdAt) }}</div>
               </div>
             </div>
             
             <div v-if="!loading.favorites && myFavorites.length === 0" class="empty-state">
               <el-icon class="empty-icon"><Star /></el-icon>
               <p>暂无收藏的商品</p>
+              <el-button type="primary" @click="$router.push('/products')">去逛逛</el-button>
             </div>
           </div>
         </div>
@@ -414,7 +441,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { CircleCheck, Warning, Delete } from '@element-plus/icons-vue'
+import { CircleCheck, Warning, Delete, Star, View } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import {
   getUserProfile,
@@ -426,6 +453,7 @@ import {
   changePassword as changePasswordApi
 } from '@/api/auth'
 import { deleteProduct } from '@/api/product'
+import { removeFromFavorites } from '@/api/favorite'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -584,10 +612,20 @@ const fetchMyOrders = async () => {
 const fetchMyFavorites = async () => {
   loading.favorites = true
   try {
-    const response = await getMyFavorites()
-    myFavorites.value = response.data.records || []
+    const response = await getMyFavorites({ page: 1, size: 12 })
+    // 处理返回的数据结构
+    if (response.data && response.data.records) {
+      myFavorites.value = response.data.records
+    } else if (response.data && Array.isArray(response.data)) {
+      myFavorites.value = response.data
+    } else {
+      myFavorites.value = []
+    }
+    console.log('收藏数据:', response.data)
   } catch (error) {
     console.error('获取我的收藏失败:', error)
+    ElMessage.error('获取收藏列表失败')
+    myFavorites.value = []
   } finally {
     loading.favorites = false
   }
@@ -843,16 +881,23 @@ const rateOrder = (orderId) => {
   router.push(`/order/rate/${orderId}`)
 }
 
-const removeFavorite = (favoriteId) => {
-  ElMessageBox.confirm('确定要取消收藏吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    // TODO: 取消收藏
+const removeFavoriteItem = async (productId) => {
+  try {
+    await ElMessageBox.confirm('确定要取消收藏吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    await removeFromFavorites(productId)
     ElMessage.success('取消收藏成功')
-    fetchMyFavorites()
-  })
+    await fetchMyFavorites()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消收藏失败:', error)
+      ElMessage.error('取消收藏失败')
+    }
+  }
 }
 
 // 初始化
@@ -1018,8 +1063,14 @@ watch(activeTab, (newTab) => {
         margin-bottom: 20px;
         
         h3 {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 600;
+          margin: 0;
+        }
+        
+        .header-actions {
+          display: flex;
+          gap: 8px;
         }
       }
       
@@ -1195,38 +1246,74 @@ watch(activeTab, (newTab) => {
       
       .favorites-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 20px;
         
         .favorite-item {
           background: white;
-          border-radius: 8px;
+          border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+          
+          &:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          }
           
           .product-image {
             position: relative;
+            cursor: pointer;
             
             img {
               width: 100%;
-              height: 150px;
+              height: 160px;
               object-fit: cover;
+              transition: transform 0.3s ease;
+            }
+            
+            &:hover img {
+              transform: scale(1.05);
+            }
+            
+            .product-status {
+              position: absolute;
+              top: 8px;
+              left: 8px;
+              background: rgba(0, 0, 0, 0.7);
+              color: white;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
             }
             
             .favorite-actions {
               position: absolute;
               top: 8px;
               right: 8px;
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+            
+            &:hover .favorite-actions {
+              opacity: 1;
             }
           }
           
           .product-info {
-            padding: 12px;
+            padding: 16px;
             
-            h4 {
-              font-size: 14px;
+            .product-title {
+              font-size: 15px;
+              font-weight: 600;
               margin-bottom: 8px;
               cursor: pointer;
+              color: var(--text-primary);
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+              overflow: hidden;
+              line-height: 1.4;
               
               &:hover {
                 color: var(--primary-color);
@@ -1235,19 +1322,47 @@ watch(activeTab, (newTab) => {
             
             .product-meta {
               display: flex;
-              justify-content: space-between;
               align-items: center;
+              gap: 8px;
+              margin-bottom: 8px;
               
               .price {
-                font-size: 16px;
-                font-weight: 600;
+                font-size: 18px;
+                font-weight: 700;
                 color: var(--danger-color);
               }
               
-              .time {
-                font-size: 12px;
+              .original-price {
+                font-size: 14px;
                 color: var(--text-secondary);
+                text-decoration: line-through;
               }
+            }
+            
+            .product-details {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 8px;
+              font-size: 12px;
+              color: var(--text-secondary);
+              
+              .condition {
+                background: var(--bg-secondary);
+                padding: 2px 6px;
+                border-radius: 4px;
+              }
+              
+              .views, .favorites {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+              }
+            }
+            
+            .favorite-time {
+              font-size: 12px;
+              color: var(--text-placeholder);
             }
           }
         }

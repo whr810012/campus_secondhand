@@ -174,7 +174,8 @@ const fetchFavorites = async () => {
     }
     
     const response = await getUserFavorites(params)
-    favorites.value = response.data.items || []
+    // MyBatis Plus Page对象结构：records为数据列表
+    favorites.value = response.data.records || []
     total.value = response.data.total || 0
     
     // 清空选择状态

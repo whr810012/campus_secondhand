@@ -69,6 +69,10 @@
                       <el-icon><Star /></el-icon>
                       我的收藏
                     </el-dropdown-item>
+                    <el-dropdown-item command="chat">
+                      <el-icon><ChatDotRound /></el-icon>
+                      聊天
+                    </el-dropdown-item>
                     <el-dropdown-item divided command="logout">
                       <el-icon><SwitchButton /></el-icon>
                       退出登录
@@ -146,6 +150,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ChatDotRound } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getCategories } from '@/api/product'
 
@@ -193,6 +198,9 @@ const handleUserCommand = async (command) => {
       break
     case 'my-favorites':
       router.push('/my-favorites')
+      break
+    case 'chat':
+      router.push('/chat')
       break
     case 'logout':
       try {

@@ -104,6 +104,29 @@ public class FavoriteController {
     }
 
     /**
+     * 获取当前用户收藏的商品
+     */
+    @GetMapping("/user/me")
+    public Result<Page<Product>> getCurrentUserFavorites(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int size,
+            HttpServletRequest httpRequest) {
+        try {
+            // 从token中获取用户ID
+            String token = httpRequest.getHeader("Authorization");
+            Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+            
+            Page<Product> favorites = favoriteService.getUserFavorites(userId, page, size);
+            return Result.success(favorites);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 获取用户收藏数量
      */
     @GetMapping("/user/{userId}/count")

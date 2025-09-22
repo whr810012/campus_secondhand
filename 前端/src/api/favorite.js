@@ -68,3 +68,12 @@ export const getUserFavoriteCount = (userId) => {
     method: 'get'
   })
 }
+
+// 获取当前用户收藏列表
+export const getMyFavorites = (params = {}) => {
+  return request({
+    url: '/favorites/user/me',
+    method: 'get',
+    params
+  })
+}
