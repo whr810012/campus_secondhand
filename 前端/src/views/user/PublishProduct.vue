@@ -1,9 +1,9 @@
 <template>
-  <div class="publish-product-page">
+  <div class="publish-product-page" v-loading="loading" element-loading-text="加载中...">
     <div class="container">
       <div class="page-header">
-        <h2>发布商品</h2>
-        <p>发布您的闲置物品，让它们找到新主人</p>
+        <h2>{{ isEdit ? '修改商品' : '发布商品' }}</h2>
+        <p>{{ isEdit ? '修改您的商品信息，让它更容易被找到' : '发布您的闲置物品，让它们找到新主人' }}</p>
       </div>
       
       <el-form
@@ -207,18 +207,26 @@
             />
           </el-form-item>
           
-          <el-form-item label="联系方式" prop="contact">
-            <el-input
-              v-model="form.contact"
-              placeholder="请输入联系方式，如：微信号、QQ号等"
-            />
+          <el-form-item label="联系方式">
+            <div class="contact-info">
+              <el-alert
+                title="联系方式说明"
+                type="info"
+                :closable="false"
+                show-icon
+              >
+                <template #default>
+                  买家将通过您的个人资料中的联系方式与您联系。如需修改联系方式，请前往个人中心更新。
+                </template>
+              </el-alert>
+            </div>
           </el-form-item>
         </el-card>
         
         <div class="form-actions">
           <el-button size="large" @click="saveDraft">保存草稿</el-button>
           <el-button type="primary" size="large" :loading="submitting" @click="submitForm">
-            发布商品
+            {{ isEdit ? '保存修改' : '发布商品' }}
           </el-button>
         </div>
       </el-form>
@@ -228,13 +236,14 @@
 
 <script setup>
 import { ref, reactive, onMounted, nextTick, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, InfoFilled } from '@element-plus/icons-vue'
-import { getCategories, createProduct } from '@/api/product'
+import { getCategories, createProduct, getProductDetail, updateProduct } from '@/api/product'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const formRef = ref()
@@ -244,6 +253,9 @@ const categories = ref([])
 const fileList = ref([])
 const tagInputVisible = ref(false)
 const tagInputValue = ref('')
+const isEdit = ref(false)
+const productId = ref(null)
+const loading = ref(false)
 
 // 图片预览相关
 const previewVisible = ref(false)
@@ -260,8 +272,7 @@ const form = reactive({
   description: '',
   tags: [],
   tradeType: ['online'],
-  location: '',
-  contact: ''
+  location: ''
 })
 
 // 表单验证规则
@@ -289,9 +300,6 @@ const rules = {
   ],
   tradeType: [
     { required: true, message: '请选择交易方式', trigger: 'change' }
-  ],
-  contact: [
-    { required: true, message: '请输入联系方式', trigger: 'blur' }
   ]
 }
 
@@ -313,7 +321,7 @@ const uploadHeaders = {
 }
 
 // 获取分类列表
-const fetchCategories = async () => {
+const loadCategories = async () => {
   try {
     const response = await getCategories()
     categories.value = buildCategoryTree(response.data)
@@ -344,6 +352,65 @@ const buildCategoryTree = (categories) => {
   })
   
   return tree
+}
+
+// 加载商品数据
+const loadProductData = async () => {
+  if (!productId.value) return
+  
+  try {
+    loading.value = true
+    const response = await getProductDetail(productId.value)
+    const product = response.data
+    
+    // 填充表单数据
+    form.title = product.title || ''
+    form.categoryId = product.categoryId || []
+    form.price = product.price ? product.price.toString() : ''
+    form.originalPrice = product.originalPrice ? product.originalPrice.toString() : ''
+    form.condition = product.condition || 1
+    form.description = product.description || ''
+    form.tags = product.tagList || []
+    form.location = product.tradeLocation || ''
+    
+    // 处理交易方式
+    if (product.tradeType === 1) {
+      form.tradeType = ['offline'] // 仅线下
+    } else if (product.tradeType === 2) {
+      form.tradeType = ['online'] // 仅线上
+    } else if (product.tradeType === 3) {
+      form.tradeType = ['online', 'offline'] // 线上线下均可
+    }
+    
+    // 处理图片数据
+    if (product.imageList && product.imageList.length > 0) {
+      form.images = [...product.imageList]
+      // 构建文件列表用于显示
+      fileList.value = product.imageList.map((imageData, index) => {
+        // 检查是否已经包含data:前缀
+        const imageUrl = imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`
+        return {
+          uid: Date.now() + index,
+          name: `image-${index + 1}.jpg`,
+          status: 'success',
+          url: imageUrl,
+          response: {
+            data: {
+              base64: imageData.startsWith('data:') ? imageData.split(',')[1] : imageData
+            }
+          }
+        }
+      })
+    }
+    
+    ElMessage.success('商品数据加载成功')
+  } catch (error) {
+    console.error('加载商品数据失败:', error)
+    ElMessage.error('加载商品数据失败')
+    router.push('/my-products')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 上传成功回调
@@ -467,22 +534,28 @@ const submitForm = async () => {
       tagList: form.tags, // 修改为tagList字段
       tradeType: tradeTypeValue,
       tradeLocation: form.location
-      // 注意：contact字段不包含在Product实体中，联系方式通过用户信息获取
+      // 注意：联系方式通过用户信息获取，不需要在商品中单独存储
     }
     
-    await createProduct(submitData)
-    
-    ElMessage.success('商品发布成功，等待审核')
+    if (isEdit.value) {
+      // 更新商品
+      await updateProduct(productId.value, submitData)
+      ElMessage.success('商品修改成功')
+    } else {
+      // 创建商品
+      await createProduct(submitData)
+      ElMessage.success('商品发布成功，等待审核')
+    }
     
     // 清除草稿
     localStorage.removeItem('productDraft')
     
-    // 跳转到我的发布页面
-    router.push('/my-products')
+    // 跳转到个人中心页面
+    router.push('/profile')
     
   } catch (error) {
-    console.error('发布失败:', error)
-    ElMessage.error(error.message || '发布失败')
+    console.error(isEdit.value ? '修改失败:' : '发布失败:', error)
+    ElMessage.error(error.message || (isEdit.value ? '修改失败' : '发布失败'))
   } finally {
     submitting.value = false
   }
@@ -504,8 +577,21 @@ const loadDraft = () => {
 
 // 初始化
 onMounted(async () => {
-  await fetchCategories()
-  loadDraft()
+  // 检查是否为编辑模式
+  if (route.query.id) {
+    isEdit.value = true
+    productId.value = route.query.id
+  }
+  
+  await loadCategories()
+  
+  if (isEdit.value) {
+    // 编辑模式：加载商品数据
+    await loadProductData()
+  } else {
+    // 发布模式：加载草稿
+    loadDraft()
+  }
 })
 </script>
 

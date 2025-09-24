@@ -50,6 +50,16 @@ public interface ProductService {
     Product createProduct(Product product, String token);
 
     /**
+     * 更新商品信息
+     *
+     * @param productId 商品ID
+     * @param product 商品信息
+     * @param token 用户token
+     * @return 更新后的商品
+     */
+    Product updateProduct(Long productId, Product product, String token);
+
+    /**
      * 删除商品
      *
      * @param productId 商品ID

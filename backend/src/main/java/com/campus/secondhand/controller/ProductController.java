@@ -97,6 +97,27 @@ public class ProductController {
     }
 
     /**
+     * 更新商品信息
+     *
+     * @param id 商品ID
+     * @param product 商品信息
+     * @param token 用户token
+     * @return 更新结果
+     */
+    @PutMapping("/{id}")
+    public Result<Product> updateProduct(
+            @PathVariable Long id,
+            @RequestBody Product product,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Product updatedProduct = productService.updateProduct(id, product, token);
+            return Result.success(updatedProduct);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 删除商品
      *
      * @param id 商品ID

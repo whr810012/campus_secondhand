@@ -84,7 +84,6 @@
                 >
                   {{ isFavorited ? '已收藏' : '收藏' }}
                 </el-button>
-                <el-button icon="Share">分享</el-button>
               </div>
             </div>
             

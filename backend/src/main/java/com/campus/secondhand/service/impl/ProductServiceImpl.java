@@ -355,6 +355,111 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    public Product updateProduct(Long productId, Product product, String token) {
+        try {
+            // 从token中获取用户ID
+            Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (userId == null) {
+                throw new RuntimeException("无效的token");
+            }
+
+            // 验证商品是否存在且属于当前用户
+            Product existingProduct = productMapper.selectById(productId);
+            if (existingProduct == null || existingProduct.getDeleted() == 1) {
+                throw new RuntimeException("商品不存在");
+            }
+            
+            if (!existingProduct.getSellerId().equals(userId)) {
+                throw new RuntimeException("无权限修改该商品");
+            }
+
+            // 处理图片数据：将base64图片存储到imgs表，获取图片ID集合
+            List<Long> imageIds = new ArrayList<>();
+            
+            // 首先尝试从imageList获取图片数据（用于兼容）
+            List<String> imagesToProcess = new ArrayList<>();
+            if (product.getImageList() != null && !product.getImageList().isEmpty()) {
+                imagesToProcess.addAll(product.getImageList());
+            }
+            // 如果imageList为空，尝试从images字段解析
+            else if (StringUtils.hasText(product.getImages())) {
+                try {
+                    // 尝试解析为字符串数组（前端发送的base64数组）
+                    List<String> imageArray = objectMapper.readValue(product.getImages(), 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                    imagesToProcess.addAll(imageArray);
+                } catch (Exception e) {
+                    log.warn("解析images字段失败，可能是旧格式数据: {}", e.getMessage());
+                }
+            }
+            
+            // 处理图片数据
+            if (!imagesToProcess.isEmpty()) {
+                for (int i = 0; i < imagesToProcess.size(); i++) {
+                    String base64Data = imagesToProcess.get(i);
+                    if (StringUtils.hasText(base64Data)) {
+                        // 生成图片名称
+                        String imageName = "product_" + System.currentTimeMillis() + "_" + i;
+                        
+                        // 保存图片到imgs表
+                        Img savedImg = imgService.saveImg(imageName, base64Data, userId);
+                        if (savedImg != null && savedImg.getId() != null) {
+                            imageIds.add(savedImg.getId());
+                            log.info("图片保存成功: imgId={}, userId={}", savedImg.getId(), userId);
+                        }
+                    }
+                }
+            }
+
+            // 将图片ID集合转换为JSON字符串存储在images字段中
+            if (!imageIds.isEmpty()) {
+                try {
+                    product.setImages(objectMapper.writeValueAsString(imageIds));
+                } catch (Exception e) {
+                    log.error("图片ID序列化失败: {}", e.getMessage());
+                    throw new RuntimeException("图片处理失败");
+                }
+            }
+
+            // 处理标签数据：将tagList转换为JSON字符串存储在tags字段中
+            if (product.getTagList() != null && !product.getTagList().isEmpty()) {
+                try {
+                    product.setTags(objectMapper.writeValueAsString(product.getTagList()));
+                    log.info("标签处理成功: tags={}", product.getTagList());
+                } catch (Exception e) {
+                    log.error("标签序列化失败: {}", e.getMessage());
+                    throw new RuntimeException("标签处理失败");
+                }
+            }
+
+            // 更新商品信息
+            product.setId(productId);
+            product.setSellerId(userId);
+            product.setStatus("pending"); // 修改后重新进入待审核状态
+            product.setAuditStatus(0); // 审核状态：0-待审核
+            product.setUpdatedAt(LocalDateTime.now());
+            // 保留原有的创建时间、浏览量、收藏量等字段
+            product.setCreatedAt(existingProduct.getCreatedAt());
+            product.setViewCount(existingProduct.getViewCount());
+            product.setFavoriteCount(existingProduct.getFavoriteCount());
+            product.setDeleted(0);
+
+            // 更新商品
+            int result = productMapper.updateById(product);
+            if (result > 0) {
+                log.info("商品更新成功: productId={}, sellerId={}, imageCount={}", productId, userId, imageIds.size());
+                return product;
+            } else {
+                throw new RuntimeException("商品更新失败");
+            }
+        } catch (Exception e) {
+            log.error("更新商品失败: {}", e.getMessage());
+            throw new RuntimeException("更新商品失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
     public boolean deleteProduct(Long productId, Long userId) {
         log.info("删除商品: productId={}, userId={}", productId, userId);
         
