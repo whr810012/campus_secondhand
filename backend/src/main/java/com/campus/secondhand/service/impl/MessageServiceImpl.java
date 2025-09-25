@@ -145,4 +145,70 @@ public class MessageServiceImpl implements MessageService {
         }
         return result > 0;
     }
+
+    @Override
+    public Page<Message> getUserMessages(Long userId, int page, int size, String keyword, String readStatus, String type) {
+        Page<Message> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<Message> queryWrapper = new LambdaQueryWrapper<>();
+        
+        // 只查询用户接收到的消息
+        queryWrapper.eq(Message::getReceiverId, userId)
+                   .eq(Message::getDeleted, 0);
+        
+        // 关键词搜索
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            queryWrapper.like(Message::getContent, keyword.trim());
+        }
+        
+        // 阅读状态筛选
+        if ("unread".equals(readStatus)) {
+            queryWrapper.eq(Message::getReceiverId, userId)
+                       .eq(Message::getIsRead, 0);
+        } else if ("read".equals(readStatus)) {
+            queryWrapper.eq(Message::getReceiverId, userId)
+                       .eq(Message::getIsRead, 1);
+        }
+        
+        // 消息类型筛选
+        if (type != null && !type.trim().isEmpty()) {
+            queryWrapper.eq(Message::getType, type.trim());
+        }
+        
+        queryWrapper.orderByDesc(Message::getCreatedAt);
+        
+        return messageMapper.selectPage(pageParam, queryWrapper);
+    }
+
+    @Override
+    @Transactional
+    public int markAllMessagesAsRead(Long userId) {
+        LambdaUpdateWrapper<Message> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Message::getReceiverId, userId)
+                    .eq(Message::getIsRead, 0)
+                    .eq(Message::getDeleted, 0)
+                    .set(Message::getIsRead, 1);
+        
+        int result = messageMapper.update(null, updateWrapper);
+        if (result > 0) {
+            log.info("用户{}标记{}条消息为已读", userId, result);
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public int clearAllMessages(Long userId) {
+        LambdaUpdateWrapper<Message> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.and(wrapper -> wrapper.eq(Message::getSenderId, userId)
+                                           .or()
+                                           .eq(Message::getReceiverId, userId))
+                    .eq(Message::getDeleted, 0)
+                    .set(Message::getDeleted, 1);
+        
+        int result = messageMapper.update(null, updateWrapper);
+        if (result > 0) {
+            log.info("用户{}清空{}条消息", userId, result);
+        }
+        return result;
+    }
 }

@@ -53,6 +53,15 @@ export const getUserProducts = (userId, params) => {
   })
 }
 
+// 获取当前用户发布的商品
+export const getMyProducts = (params) => {
+  return request({
+    url: '/products/my',
+    method: 'get',
+    params
+  })
+}
+
 // 商品置顶
 export const topProduct = (id, data) => {
   return request({
@@ -100,5 +109,23 @@ export const getRelatedProducts = (productId, params = {}) => {
     url: `/products/${productId}/related`,
     method: 'get',
     params
+  })
+}
+
+// 推广商品
+export const promoteProduct = (id, data) => {
+  return request({
+    url: `/products/${id}/promote`,
+    method: 'post',
+    data
+  })
+}
+
+// 更新商品状态
+export const updateProductStatus = (id, status) => {
+  return request({
+    url: `/products/${id}/status`,
+    method: 'put',
+    data: { status }
   })
 }

@@ -101,13 +101,13 @@ public class UserServiceImpl implements UserService {
                 throw new RuntimeException("用户不存在");
             }
             
-            // 验证旧密码
-            if (!passwordEncoder.matches(oldPassword, currentUser.getPassword())) {
+            // 验证旧密码 - 明文比较
+            if (!oldPassword.equals(currentUser.getPassword())) {
                 throw new RuntimeException("原密码错误");
             }
             
-            // 更新密码
-            currentUser.setPassword(passwordEncoder.encode(newPassword));
+            // 更新密码 - 明文存储
+            currentUser.setPassword(newPassword);
             currentUser.setUpdatedAt(LocalDateTime.now());
             userMapper.updateById(currentUser);
             

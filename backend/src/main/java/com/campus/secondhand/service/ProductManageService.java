@@ -29,6 +29,32 @@ public interface ProductManageService {
                                 String auditStatus, Long categoryId, Long userId);
 
     /**
+     * 获取待审核商品列表（管理员接口）
+     *
+     * @param page 页码
+     * @param size 每页大小
+     * @return 待审核商品分页数据（Map格式）
+     */
+    java.util.Map<String, Object> getPendingProducts(int page, int size);
+
+    /**
+     * 审核通过商品
+     *
+     * @param productId 商品ID
+     * @return 是否成功
+     */
+    boolean approveProduct(Long productId);
+
+    /**
+     * 审核拒绝商品
+     *
+     * @param productId 商品ID
+     * @param reason 拒绝原因
+     * @return 是否成功
+     */
+    boolean rejectProduct(Long productId, String reason);
+
+    /**
      * 下架违规商品
      *
      * @param productId 商品ID

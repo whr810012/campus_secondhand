@@ -106,9 +106,9 @@
               </el-avatar>
             </template>
           </el-table-column>
-          <el-table-column prop="nickname" label="昵称" />
+          <el-table-column prop="nickname" label="昵称" show-overflow-tooltip />
           <el-table-column prop="phone" label="手机号" />
-          <el-table-column prop="school" label="学校" />
+          <el-table-column prop="school" label="学校" show-overflow-tooltip />
           <el-table-column prop="createdAt" label="注册时间">
             <template #default="{ row }">
               {{ formatDate(row.createdAt) }}
@@ -116,8 +116,8 @@
           </el-table-column>
           <el-table-column prop="status" label="状态" width="80">
             <template #default="{ row }">
-              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-                {{ row.status === 1 ? '正常' : '禁用' }}
+              <el-tag :type="row.status === 0 ? 'success' : 'danger'" size="small">
+                {{ row.status === 0 ? '正常' : '禁用' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -136,10 +136,17 @@
           <el-table-column prop="image" label="图片" width="60">
             <template #default="{ row }">
               <el-image
-                :src="row.images?.[0]"
+                :src="row.images?.[0] || '/placeholder-image.png'"
                 fit="cover"
                 style="width: 40px; height: 40px; border-radius: 4px"
-              />
+                :preview-disabled="!row.images?.[0]"
+              >
+                <template #error>
+                  <div style="width: 40px; height: 40px; background: #f5f7fa; display: flex; align-items: center; justify-content: center; border-radius: 4px; color: #909399; font-size: 12px;">
+                    无图
+                  </div>
+                </template>
+              </el-image>
             </template>
           </el-table-column>
           <el-table-column prop="title" label="商品名称" show-overflow-tooltip />
@@ -173,36 +180,42 @@
       <div class="status-card">
         <div class="status-header">
           <h3>系统状态</h3>
-          <el-tag :type="systemStatus.overall === 'healthy' ? 'success' : 'warning'">
-            {{ systemStatus.overall === 'healthy' ? '运行正常' : '需要关注' }}
+          <el-tag :type="systemStatus.status === 'running' ? 'success' : 'warning'">
+            {{ systemStatus.status === 'running' ? '运行正常' : '需要关注' }}
           </el-tag>
         </div>
         <div class="status-items">
           <div class="status-item">
             <span class="status-label">服务器状态</span>
-            <el-tag :type="systemStatus.server === 'online' ? 'success' : 'danger'" size="small">
-              {{ systemStatus.server === 'online' ? '在线' : '离线' }}
+            <el-tag :type="systemStatus.status === 'running' ? 'success' : 'danger'" size="small">
+              {{ systemStatus.status === 'running' ? '运行中' : '停止' }}
             </el-tag>
           </div>
           <div class="status-item">
             <span class="status-label">数据库状态</span>
-            <el-tag :type="systemStatus.database === 'connected' ? 'success' : 'danger'" size="small">
-              {{ systemStatus.database === 'connected' ? '已连接' : '断开' }}
+            <el-tag :type="systemStatus.databaseStatus === 'connected' ? 'success' : 'danger'" size="small">
+              {{ systemStatus.databaseStatus === 'connected' ? '已连接' : '断开' }}
             </el-tag>
           </div>
           <div class="status-item">
-            <span class="status-label">存储状态</span>
-            <el-tag :type="systemStatus.storage === 'available' ? 'success' : 'warning'" size="small">
-              {{ systemStatus.storage === 'available' ? '可用' : '不足' }}
-            </el-tag>
+            <span class="status-label">磁盘使用率</span>
+            <span class="status-value">{{ systemStatus.diskUsage }}%</span>
           </div>
           <div class="status-item">
             <span class="status-label">CPU使用率</span>
-            <span class="status-value">{{ systemStatus.cpu }}%</span>
+            <span class="status-value">{{ systemStatus.cpuUsage }}%</span>
           </div>
           <div class="status-item">
             <span class="status-label">内存使用率</span>
-            <span class="status-value">{{ systemStatus.memory }}%</span>
+            <span class="status-value">{{ systemStatus.memoryUsage }}%</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">服务器时间</span>
+            <span class="status-value">{{ systemStatus.serverTime }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">系统版本</span>
+            <span class="status-value">v{{ systemStatus.version }}</span>
           </div>
         </div>
       </div>
@@ -272,14 +285,32 @@ const chartData = reactive({
   categoryDistribution: []
 })
 
+// 初始化默认数据
+const initDefaultData = () => {
+  // 确保所有响应式数据都有默认值
+  if (!Array.isArray(recentUsers.value)) {
+    recentUsers.value = []
+  }
+  if (!Array.isArray(pendingProducts.value)) {
+    pendingProducts.value = []
+  }
+  if (!Array.isArray(chartData.userGrowth)) {
+    chartData.userGrowth = []
+  }
+  if (!Array.isArray(chartData.categoryDistribution)) {
+    chartData.categoryDistribution = []
+  }
+}
+
 // 系统状态
 const systemStatus = reactive({
-  overall: 'healthy',
-  server: 'online',
-  database: 'connected',
-  storage: 'available',
-  cpu: 45,
-  memory: 62
+  status: 'running',
+  databaseStatus: 'connected',
+  cpuUsage: 0,
+  memoryUsage: 0,
+  diskUsage: 0,
+  serverTime: '',
+  version: '1.0.0'
 })
 
 // 初始化用户增长图表
@@ -294,8 +325,36 @@ const initUserChart = () => {
 const updateUserChart = () => {
   if (!userChart) return
   
-  const dates = chartData.userGrowth.map(item => item.date)
-  const counts = chartData.userGrowth.map(item => item.count)
+  // 确保数据是数组格式并过滤无效数据
+  const growthData = Array.isArray(chartData.userGrowth) 
+    ? chartData.userGrowth.filter(item => item && item.date && typeof item.count !== 'undefined')
+    : []
+  
+  // 如果没有有效数据，显示空图表
+  if (growthData.length === 0) {
+    const emptyOption = {
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          color: '#999',
+          fontSize: 14
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      }
+    }
+    userChart.setOption(emptyOption)
+    return
+  }
+  
+  const dates = growthData.map(item => item.date)
+  const counts = growthData.map(item => item.count)
   
   const option = {
     tooltip: {
@@ -364,10 +423,32 @@ const initCategoryChart = () => {
 const updateCategoryChart = () => {
   if (!categoryChart) return
   
-  const categories = chartData.categoryDistribution.map(item => item.name)
-  const data = chartData.categoryDistribution.map(item => ({
-    value: item.count,
-    name: item.name
+  // 确保数据是数组格式并过滤无效数据
+  const distributionData = Array.isArray(chartData.categoryDistribution) 
+    ? chartData.categoryDistribution.filter(item => item && item.categoryName && typeof item.productCount !== 'undefined')
+    : []
+  
+  // 如果没有有效数据，显示空图表
+  if (distributionData.length === 0) {
+    const emptyOption = {
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          color: '#999',
+          fontSize: 14
+        }
+      }
+    }
+    categoryChart.setOption(emptyOption)
+    return
+  }
+  
+  const categories = distributionData.map(item => item.categoryName)
+  const data = distributionData.map(item => ({
+    value: item.productCount,
+    name: item.categoryName
   }))
   
   const option = {
@@ -466,7 +547,18 @@ const fetchStats = async () => {
     loading.stats = true
     const response = await getDashboardStats()
     if (response && response.data) {
-      Object.assign(stats, response.data)
+      const data = response.data
+      // 映射API返回的字段名到组件使用的字段名
+      stats.userCount = data.totalUsers || 0
+      stats.productCount = data.totalProducts || 0
+      stats.orderCount = data.totalOrders || 0
+      stats.revenue = data.totalReviews || 0 // 暂时用评论数代替收入
+      
+      // 计算增长率（基于今日新增数据）
+      stats.userGrowth = data.todayNewUsers || 0
+      stats.productGrowth = data.todayNewProducts || 0
+      stats.orderGrowth = data.todayNewOrders || 0
+      stats.revenueGrowth = 0 // 暂时设为0
     }
   } catch (error) {
     console.error('获取统计数据失败:', error)
@@ -482,11 +574,25 @@ const fetchRecentUsers = async () => {
     loading.users = true
     const response = await getRecentUsers()
     if (response && response.data) {
-      recentUsers.value = response.data
+      // 确保数据是数组格式
+      const users = Array.isArray(response.data) ? response.data : 
+                   (response.data.records ? response.data.records : [])
+      
+      // 处理用户数据，添加学校信息映射
+      recentUsers.value = users.map(user => ({
+        ...user,
+        // 如果有schoolId但没有school字段，可以显示学校ID或者后续通过API获取学校名称
+        school: user.school || (user.schoolId ? `学校${user.schoolId}` : '未设置'),
+        // 确保状态字段正确映射
+        displayStatus: user.status === 0 ? '正常' : '禁用'
+      }))
+    } else {
+      recentUsers.value = []
     }
   } catch (error) {
     console.error('获取最新用户失败:', error)
     ElMessage.error('获取最新用户失败')
+    recentUsers.value = []
   } finally {
     loading.users = false
   }
@@ -498,11 +604,25 @@ const fetchPendingProducts = async () => {
     loading.products = true
     const response = await getPendingProducts()
     if (response && response.data) {
-      pendingProducts.value = response.data
+      // 确保数据是数组格式
+      const products = Array.isArray(response.data) ? response.data : 
+                      (response.data.records ? response.data.records : [])
+      
+      // 处理商品数据，添加缺失的字段
+       pendingProducts.value = products.map(product => ({
+         ...product,
+         // 处理图片字段 - 使用后端返回的imageList字段，如果没有则设置为空数组
+         images: product.imageList || product.images || [],
+         // 处理卖家信息 - 将sellerId映射为显示名称
+         seller: product.nickname || `用户${product.sellerId}` || '未知用户'
+       }))
+    } else {
+      pendingProducts.value = []
     }
   } catch (error) {
     console.error('获取待审核商品失败:', error)
     ElMessage.error('获取待审核商品失败')
+    pendingProducts.value = []
   } finally {
     loading.products = false
   }
@@ -513,7 +633,14 @@ const fetchSystemStatus = async () => {
   try {
     const response = await getSystemStatus()
     if (response && response.data) {
-      Object.assign(systemStatus, response.data)
+      // 映射API返回的数据到组件状态
+      systemStatus.status = response.data.status || 'unknown'
+      systemStatus.databaseStatus = response.data.databaseStatus || 'disconnected'
+      systemStatus.cpuUsage = Math.round(response.data.cpuUsage || 0)
+      systemStatus.memoryUsage = Math.round(response.data.memoryUsage || 0)
+      systemStatus.diskUsage = Math.round(response.data.diskUsage || 0)
+      systemStatus.serverTime = response.data.serverTime || ''
+      systemStatus.version = response.data.version || '1.0.0'
     }
   } catch (error) {
     console.error('获取系统状态失败:', error)
@@ -529,47 +656,75 @@ const fetchChartData = async () => {
     // 获取用户增长趋势
     const userGrowthResponse = await getUserGrowthTrend()
     if (userGrowthResponse && userGrowthResponse.data) {
-      chartData.userGrowth = userGrowthResponse.data
+      chartData.userGrowth = Array.isArray(userGrowthResponse.data) ? userGrowthResponse.data : []
       updateUserChart()
+    } else {
+      chartData.userGrowth = []
     }
     
     // 获取分类统计
     const categoryResponse = await getCategoryStats()
     if (categoryResponse && categoryResponse.data) {
-      chartData.categoryDistribution = categoryResponse.data
+      chartData.categoryDistribution = Array.isArray(categoryResponse.data) ? categoryResponse.data : []
       updateCategoryChart()
+    } else {
+      chartData.categoryDistribution = []
     }
   } catch (error) {
     console.error('获取图表数据失败:', error)
     ElMessage.error('获取图表数据失败')
+    // 设置默认空数据避免后续错误
+    chartData.userGrowth = []
+    chartData.categoryDistribution = []
   } finally {
     loading.charts = false
   }
 }
 
+// 监听用户图表周期变化
+watch(userChartPeriod, async (newPeriod) => {
+  try {
+    const response = await getUserGrowthTrend(newPeriod === '7d' ? 7 : newPeriod === '30d' ? 30 : 90)
+    if (response && response.data) {
+      chartData.userGrowth = Array.isArray(response.data) ? response.data : []
+      updateUserChart()
+    }
+  } catch (error) {
+    console.error('更新用户增长趋势失败:', error)
+  }
+})
+
 // 组件挂载时初始化
 onMounted(async () => {
-  // 获取数据
-  await Promise.all([
-    fetchStats(),
-    fetchRecentUsers(),
-    fetchPendingProducts(),
-    fetchSystemStatus()
-  ])
-  
-  // 初始化图表
-  await nextTick()
-  initUserChart()
-  initCategoryChart()
-  
-  // 获取图表数据
-  await fetchChartData()
-  
-  // 监听窗口大小变化
-  window.addEventListener('resize', () => {
-    userChart?.resize()
-    categoryChart?.resize()
-  })
+  try {
+    // 初始化默认数据
+    initDefaultData()
+    
+    // 获取数据
+    await Promise.all([
+      fetchStats(),
+      fetchRecentUsers(),
+      fetchPendingProducts(),
+      fetchSystemStatus()
+    ])
+    
+    // 获取图表数据
+    await fetchChartData()
+    
+    // 初始化图表（在数据获取完成后）
+    await nextTick()
+    initUserChart()
+    initCategoryChart()
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', () => {
+      userChart?.resize()
+      categoryChart?.resize()
+    })
+  } catch (error) {
+    console.error('Dashboard初始化失败:', error)
+    ElMessage.error('页面初始化失败，请刷新重试')
+  }
 })
 </script>
 

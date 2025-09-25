@@ -61,3 +61,28 @@ export const deleteMessage = (messageId, userId) => {
     params: { userId }
   })
 }
+
+// 清空所有消息
+export const clearAllMessages = (userId) => {
+  return request({
+    url: `/messages/clear/${userId}`,
+    method: 'delete'
+  })
+}
+
+// 获取用户消息列表
+export const getUserMessages = (params) => {
+  return request({
+    url: '/messages/user',
+    method: 'get',
+    params
+  })
+}
+
+// 标记所有消息为已读
+export const markAllMessagesAsRead = (userId) => {
+  return request({
+    url: `/messages/read-all/${userId}`,
+    method: 'put'
+  })
+}

@@ -81,6 +81,35 @@ public interface MessageService {
     boolean deleteMessage(Long messageId, Long userId);
 
     /**
+     * 获取用户消息列表
+     *
+     * @param userId 用户ID
+     * @param page 页码
+     * @param size 每页大小
+     * @param keyword 搜索关键词
+     * @param readStatus 阅读状态
+     * @param type 消息类型
+     * @return 消息分页数据
+     */
+    Page<Message> getUserMessages(Long userId, int page, int size, String keyword, String readStatus, String type);
+
+    /**
+     * 标记所有消息为已读
+     *
+     * @param userId 用户ID
+     * @return 标记数量
+     */
+    int markAllMessagesAsRead(Long userId);
+
+    /**
+     * 清空所有消息
+     *
+     * @param userId 用户ID
+     * @return 删除数量
+     */
+    int clearAllMessages(Long userId);
+
+    /**
      * 聊天列表项
      */
     class ChatListItem {

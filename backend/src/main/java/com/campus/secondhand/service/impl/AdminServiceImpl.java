@@ -105,4 +105,51 @@ public class AdminServiceImpl implements AdminService {
                 stats.getTransactionCount(), stats.getAverageAmount());
         return stats;
     }
+
+    @Override
+    public java.util.Map<String, Object> getSystemStatus() {
+        java.util.Map<String, Object> status = new java.util.HashMap<>();
+        try {
+            // 获取系统基本信息
+            status.put("serverTime", new java.util.Date());
+            status.put("status", "running");
+            status.put("version", "1.0.0");
+            
+            // 获取数据库连接状态
+            DashboardStats stats = adminMapper.selectDashboardStats();
+            status.put("databaseStatus", stats != null ? "connected" : "disconnected");
+            
+            // 系统负载信息（模拟数据）
+            status.put("cpuUsage", Math.random() * 100);
+            status.put("memoryUsage", Math.random() * 100);
+            status.put("diskUsage", Math.random() * 100);
+            
+            log.info("获取系统状态成功");
+        } catch (Exception e) {
+            log.error("获取系统状态失败", e);
+            status.put("status", "error");
+            status.put("error", e.getMessage());
+        }
+        return status;
+    }
+
+    @Override
+    public java.util.List<java.util.Map<String, Object>> getUserGrowthTrend(int days) {
+        java.util.List<java.util.Map<String, Object>> data = adminMapper.selectDailyUserStats(days);
+        if (data == null) {
+            data = new java.util.ArrayList<>();
+        }
+        log.info("获取{}天内用户增长趋势数据: {} 条记录", days, data.size());
+        return data;
+    }
+
+    @Override
+    public java.util.List<java.util.Map<String, Object>> getCategoryStats() {
+        java.util.List<java.util.Map<String, Object>> stats = adminMapper.selectCategoryStats();
+        if (stats == null) {
+            stats = new java.util.ArrayList<>();
+        }
+        log.info("获取分类统计数据: {} 个分类", stats.size());
+        return stats;
+    }
 }

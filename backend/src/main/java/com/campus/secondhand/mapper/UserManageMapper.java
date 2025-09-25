@@ -29,7 +29,7 @@ public interface UserManageMapper extends BaseMapper<User> {
         "FROM users u",
         "WHERE u.deleted = 0",
         "<if test='keyword != null and keyword != \"\"'>",
-        "  AND (u.username LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "  AND (u.nickname LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR u.phone LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR u.student_id LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
         "</if>",
@@ -52,6 +52,41 @@ public interface UserManageMapper extends BaseMapper<User> {
                              @Param("keyword") String keyword,
                              @Param("status") String status,
                              @Param("verifyStatus") String verifyStatus);
+
+    /**
+     * 管理员分页查询用户列表
+     */
+    @Select({
+        "<script>",
+        "SELECT u.*, ",
+        "  CASE WHEN u.ban_end_time &gt; NOW() THEN 'BANNED' ELSE u.status END as current_status",
+        "FROM users u",
+        "WHERE u.deleted = 0",
+        "<if test='keyword != null and keyword != \"\"'>",
+        "  AND (u.nickname LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "    OR u.phone LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "    OR u.student_id LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "    OR u.real_name LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
+        "</if>",
+        "<choose>",
+        "  <when test='sortBy == \"latest\"'>",
+        "    ORDER BY u.created_at DESC",
+        "  </when>",
+        "  <when test='sortBy == \"oldest\"'>",
+        "    ORDER BY u.created_at ASC",
+        "  </when>",
+        "  <when test='sortBy == \"name\"'>",
+        "    ORDER BY u.nickname ASC",
+        "  </when>",
+        "  <otherwise>",
+        "    ORDER BY u.created_at DESC",
+        "  </otherwise>",
+        "</choose>",
+        "</script>"
+    })
+    Page<User> selectUserListForAdmin(Page<User> page, 
+                                     @Param("sortBy") String sortBy,
+                                     @Param("keyword") String keyword);
 
     /**
      * 封禁用户

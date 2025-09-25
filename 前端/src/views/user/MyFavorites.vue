@@ -71,34 +71,34 @@
               </el-button>
             </div>
             
-            <div class="product-image" @click="viewProduct(favorite.product)">
-              <img :src="favorite.product.images[0] || '/placeholder.jpg'" :alt="favorite.product.title" />
-              <div class="product-status" v-if="favorite.product.status !== 'selling'" :class="getStatusClass(favorite.product.status)">
-                {{ getStatusText(favorite.product.status) }}
+            <div class="product-image" @click="viewProduct(favorite)">
+              <img :src="favorite?.images?.[0] || '/placeholder.jpg'" :alt="favorite?.title" />
+              <div class="product-status" v-if="favorite?.status !== 'selling'" :class="getStatusClass(favorite?.status)">
+                {{ getStatusText(favorite?.status) }}
               </div>
             </div>
             
             <div class="product-info">
-              <h4 class="product-title" @click="viewProduct(favorite.product)">{{ favorite.product.title }}</h4>
-              <div class="product-price">¥{{ favorite.product.price }}</div>
+              <h4 class="product-title" @click="viewProduct(favorite)">{{ favorite?.title }}</h4>
+              <div class="product-price">¥{{ favorite?.price }}</div>
               <div class="product-meta">
-                <span class="category">{{ favorite.product.category?.name }}</span>
+                <span class="category">{{ favorite?.category?.name }}</span>
                 <span class="views">
                   <el-icon><View /></el-icon>
-                  {{ favorite.product.views }}
+                  {{ favorite?.viewCount }}
                 </span>
               </div>
               <div class="favorite-time">收藏于 {{ formatTime(favorite.created_at) }}</div>
             </div>
             
             <div class="product-actions">
-              <el-button size="small" type="primary" @click="viewProduct(favorite.product)">
+              <el-button size="small" type="primary" @click="viewProduct(favorite)">
                 查看详情
               </el-button>
               <el-button 
                 size="small" 
-                @click="contactSeller(favorite.product)"
-                :disabled="favorite.product.status !== 'selling'"
+                @click="contactSeller(favorite)"
+                :disabled="favorite?.status !== 'selling'"
               >
                 联系卖家
               </el-button>
@@ -264,7 +264,7 @@ const contactSeller = (product) => {
 const removeFavorite = async (favorite) => {
   try {
     await ElMessageBox.confirm(
-      `确定要取消收藏"${favorite.product.title}"吗？`,
+      `确定要取消收藏"${favorite?.title}"吗？`,
       '确认操作',
       {
         confirmButtonText: '确定',
@@ -368,6 +368,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@import '@/styles/variables.scss';
 .my-favorites {
   padding: 20px;
   
@@ -497,7 +498,7 @@ onMounted(() => {
           margin: 0 0 8px 0;
           cursor: pointer;
           transition: var(--transition-color);
-          @include text-ellipsis;
+          @include text-ellipsis();
           
           &:hover {
             color: var(--primary-color);

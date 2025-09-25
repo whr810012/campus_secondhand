@@ -69,6 +69,7 @@ com\campus\secondhand\controller\UserManageController$VerifyIdentityRequest.clas
 com\campus\secondhand\entity\Img.class
 com\campus\secondhand\service\AuthService.class
 com\campus\secondhand\controller\AuthController$StudentVerifyRequest.class
+com\campus\secondhand\config\MybatisPlusConfig.class
 com\campus\secondhand\controller\UserController$ChangePasswordRequest.class
 com\campus\secondhand\dto\LoginResponse$UserInfo.class
 com\campus\secondhand\service\UserManageService.class

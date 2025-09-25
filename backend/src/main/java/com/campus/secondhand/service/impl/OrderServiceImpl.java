@@ -282,6 +282,14 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.selectPage(pageParam, queryWrapper);
     }
 
+    @Override
+    public Page<Order> getOrderListForAdmin(int page, int size, String status, String keyword) {
+        log.info("管理员查询订单列表: page={}, size={}, status={}, keyword={}", page, size, status, keyword);
+        
+        // 直接调用已有的getAllOrders方法
+        return getAllOrders(page, size, status, keyword);
+    }
+
     /**
      * 生成订单号
      */

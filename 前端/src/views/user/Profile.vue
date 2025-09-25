@@ -79,9 +79,6 @@
               <h4>{{ item.title }}</h4>
               <p>{{ item.description }}</p>
             </div>
-            <div class="function-count">
-              {{ item.count }}
-            </div>
           </div>
         </el-card>
       </div>
@@ -336,17 +333,6 @@
               </div>
             </el-card>
             
-            <el-card class="setting-item" @click="showPhoneDialog = true">
-              <div class="setting-content">
-                <el-icon class="setting-icon"><Phone /></el-icon>
-                <div class="setting-info">
-                  <h4>修改手机号</h4>
-                  <p>当前手机号：{{ maskPhone(userInfo.phone) }}</p>
-                </div>
-                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
-              </div>
-            </el-card>
-            
             <el-card class="setting-item" @click="logout">
               <div class="setting-content">
                 <el-icon class="setting-icon"><SwitchButton /></el-icon>
@@ -464,6 +450,7 @@ const showAvatarDialog = ref(false)
 const showPasswordDialog = ref(false)
 const showPhoneDialog = ref(false)
 const previewAvatar = ref('')
+const passwordFormRef = ref()
 
 const productFilter = ref('all')
 const orderFilter = ref('all')
@@ -519,29 +506,25 @@ const functionItems = computed(() => [
     key: 'products',
     title: '我的发布',
     description: '管理我发布的商品',
-    icon: 'Box',
-    count: userStats.value.productCount || 0
+    icon: 'Box'
   },
   {
     key: 'orders',
     title: '我的订单',
     description: '查看购买记录',
-    icon: 'ShoppingCart',
-    count: userStats.value.orderCount || 0
+    icon: 'ShoppingCart'
   },
   {
     key: 'favorites',
     title: '我的收藏',
     description: '收藏的商品',
-    icon: 'Star',
-    count: userStats.value.favoriteCount || 0
+    icon: 'Star'
   },
   {
     key: 'settings',
     title: '账户设置',
     description: '个人信息设置',
-    icon: 'Setting',
-    count: ''
+    icon: 'Setting'
   }
 ])
 
@@ -1043,12 +1026,6 @@ watch(activeTab, (newTab) => {
             color: var(--text-secondary);
             margin: 0;
           }
-        }
-        
-        .function-count {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--primary-color);
         }
       }
     }

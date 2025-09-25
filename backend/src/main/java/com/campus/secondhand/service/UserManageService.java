@@ -26,6 +26,17 @@ public interface UserManageService {
     Page<User> getUserList(int page, int size, String keyword, String status, String verifyStatus);
 
     /**
+     * 分页查询用户列表（管理员接口）
+     *
+     * @param page 页码
+     * @param size 每页大小
+     * @param sortBy 排序方式
+     * @param keyword 搜索关键词
+     * @return 用户分页数据（Map格式）
+     */
+    java.util.Map<String, Object> getUserList(int page, int size, String sortBy, String keyword);
+
+    /**
      * 封禁用户
      *
      * @param userId 用户ID

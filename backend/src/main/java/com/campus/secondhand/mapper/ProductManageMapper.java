@@ -268,4 +268,17 @@ public interface ProductManageMapper extends BaseMapper<Product> {
      */
     @Update("UPDATE messages SET deleted = 1 WHERE product_id = #{productId}")
     int deleteMessagesByProductId(@Param("productId") Long productId);
+
+    /**
+     * 分页查询待审核商品列表
+     */
+    @Select({
+        "SELECT p.*, u.nickname, c.name as category_name",
+        "FROM products p",
+        "LEFT JOIN users u ON p.seller_id = u.id",
+        "LEFT JOIN categories c ON p.category_id = c.id",
+        "WHERE p.deleted = 0 AND p.audit_status = 0",
+        "ORDER BY p.created_at DESC"
+    })
+    Page<Product> selectPendingProducts(Page<Product> page);
 }

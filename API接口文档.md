@@ -321,6 +321,30 @@
 - **请求参数**: `userId` (Long): 用户ID
 - **响应**: 删除结果
 
+### 8. 获取用户消息列表
+- **接口**: `GET /messages/user`
+- **描述**: 分页查询用户相关的消息列表
+- **请求参数**:
+  - `userId` (Long): 用户ID
+  - `page` (int, 默认1): 页码
+  - `size` (int, 默认10): 每页大小
+  - `keyword` (String, 可选): 搜索关键词
+  - `readStatus` (String, 可选): 阅读状态筛选 (read/unread)
+  - `type` (String, 可选): 消息类型筛选
+- **响应**: 用户消息分页数据
+
+### 9. 标记所有消息为已读
+- **接口**: `PUT /messages/read-all/{userId}`
+- **描述**: 标记用户所有未读消息为已读
+- **路径参数**: `userId` (Long): 用户ID
+- **响应**: 标记的消息数量
+
+### 10. 清空所有消息
+- **接口**: `DELETE /messages/clear/{userId}`
+- **描述**: 清空用户所有消息（软删除）
+- **路径参数**: `userId` (Long): 用户ID
+- **响应**: 删除的消息数量
+
 ---
 
 ## 评价模块

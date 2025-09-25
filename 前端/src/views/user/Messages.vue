@@ -62,7 +62,7 @@
         class="message-item" 
         v-for="message in messages" 
         :key="message.id"
-        :class="{ unread: !message.is_read }"
+        :class="{ unread: !message.isRead }"
         @click="handleMessageClick(message)"
       >
         <div class="message-avatar">
@@ -83,8 +83,8 @@
           <div class="message-header">
             <h4 class="message-title">{{ message.title }}</h4>
             <div class="message-meta">
-              <span class="message-time">{{ formatTime(message.created_at) }}</span>
-              <el-tag v-if="!message.is_read" type="danger" size="small">未读</el-tag>
+              <span class="message-time">{{ formatTime(message.createdAt) }}</span>
+              <el-tag v-if="!message.isRead" type="danger" size="small">未读</el-tag>
             </div>
           </div>
           
@@ -109,7 +109,7 @@
         </div>
         
         <div class="message-actions">
-          <el-button size="small" @click.stop="markAsRead(message)" v-if="!message.is_read">
+          <el-button size="small" @click.stop="markAsRead(message)" v-if="!message.isRead">
             标记已读
           </el-button>
           <el-button size="small" @click.stop="deleteMessage(message)" type="danger" text>
@@ -145,7 +145,7 @@
             </el-avatar>
             <div class="sender-details">
               <span class="sender-name">{{ currentMessage.sender?.nickname || '系统消息' }}</span>
-              <span class="send-time">{{ formatTime(currentMessage.created_at) }}</span>
+              <span class="send-time">{{ formatTime(currentMessage.createdAt) }}</span>
             </div>
           </div>
           <el-tag :type="getTypeTagType(currentMessage.type)">{{ getTypeText(currentMessage.type) }}</el-tag>
@@ -196,7 +196,11 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Delete, User, Bell, ShoppingCart, Star, Message } from '@element-plus/icons-vue'
 import { getUserMessages, markMessageAsRead, markAllMessagesAsRead, deleteMessage as deleteMessageApi, clearAllMessages } from '@/api/message'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
+
+// 用户store
+const userStore = useUserStore()
 
 // 响应式数据
 const loading = ref(false)
@@ -214,7 +218,7 @@ const currentMessage = ref(null)
 
 // 计算未读消息数量
 const unreadCount = computed(() => {
-  return messages.value.filter(msg => !msg.is_read).length
+  return messages.value.filter(msg => !msg.isRead).length
 })
 
 // 获取消息列表
@@ -222,11 +226,12 @@ const fetchMessages = async () => {
   try {
     loading.value = true
     const params = {
+      userId: userStore.userInfo?.id,
       page: currentPage.value,
       size: pageSize.value,
       type: activeTab.value === 'all' ? undefined : activeTab.value,
       keyword: searchKeyword.value,
-      is_read: readStatus.value === '' ? undefined : readStatus.value === 'read'
+      readStatus: readStatus.value === '' ? undefined : readStatus.value
     }
     
     const response = await getUserMessages(params)
@@ -278,7 +283,7 @@ const handleMessageClick = (message) => {
   detailDialogVisible.value = true
   
   // 如果是未读消息，标记为已读
-  if (!message.is_read) {
+  if (!message.isRead) {
     markAsRead(message)
   }
 }
@@ -286,8 +291,8 @@ const handleMessageClick = (message) => {
 // 标记单条消息为已读
 const markAsRead = async (message) => {
   try {
-    await markMessageAsRead(message.id)
-    message.is_read = true
+    await markMessageAsRead(message.id, userStore.userInfo?.id)
+    message.isRead = true
     ElMessage.success('标记成功')
   } catch (error) {
     console.error('标记失败:', error)
@@ -298,9 +303,9 @@ const markAsRead = async (message) => {
 // 标记全部为已读
 const markAllAsRead = async () => {
   try {
-    await markAllMessagesAsRead()
+    await markAllMessagesAsRead(userStore.userInfo?.id)
     messages.value.forEach(msg => {
-      msg.is_read = true
+      msg.isRead = true
     })
     ElMessage.success('全部标记成功')
   } catch (error) {
@@ -322,7 +327,7 @@ const deleteMessage = async (message) => {
       }
     )
     
-    await deleteMessageApi(message.id)
+    await deleteMessageApi(message.id, userStore.userInfo?.id)
     ElMessage.success('删除成功')
     fetchMessages()
   } catch (error) {
@@ -346,7 +351,7 @@ const clearAll = async () => {
       }
     )
     
-    await clearAllMessages()
+    await clearAllMessages(userStore.userInfo?.id)
     ElMessage.success('清空成功')
     fetchMessages()
   } catch (error) {
@@ -424,8 +429,17 @@ const formatTime = (time) => {
 }
 
 // 组件挂载
-onMounted(() => {
-  fetchMessages()
+onMounted(async () => {
+  // 确保用户已登录
+  if (!userStore.userInfo?.id) {
+    await userStore.getUserInfo()
+  }
+  
+  if (userStore.userInfo?.id) {
+    fetchMessages()
+  } else {
+    ElMessage.error('请先登录')
+  }
 })
 </script>
 

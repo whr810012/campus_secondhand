@@ -196,18 +196,7 @@ public class OrderController {
         }
     }
 
-    /**
-     * 管理员查看所有订单
-     */
-    @GetMapping("/admin")
-    public Result<Page<Order>> getAllOrders(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "") String status,
-            @RequestParam(defaultValue = "") String keyword) {
-        Page<Order> orders = orderService.getAllOrders(page, size, status, keyword);
-        return Result.success(orders);
-    }
+
 
     // 内部类定义请求参数
     public static class CreateOrderRequest {
@@ -267,5 +256,18 @@ public class OrderController {
         public void setUserId(Long userId) { this.userId = userId; }
         public String getReason() { return reason; }
         public void setReason(String reason) { this.reason = reason; }
+    }
+
+    /**
+     * 管理员获取订单列表
+     */
+    @GetMapping("/admin")
+    public Result<Page<Order>> getOrderListForAdmin(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword) {
+        Page<Order> orders = orderService.getOrderListForAdmin(page, size, status, keyword);
+        return Result.success(orders);
     }
 }

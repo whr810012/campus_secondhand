@@ -43,6 +43,23 @@ public class UserManageServiceImpl implements UserManageService {
     }
 
     @Override
+    public java.util.Map<String, Object> getUserList(int page, int size, String sortBy, String keyword) {
+        log.info("管理员查询用户列表: page={}, size={}, sortBy={}, keyword={}", page, size, sortBy, keyword);
+        
+        Page<User> pageParam = new Page<>(page, size);
+        Page<User> result = userManageMapper.selectUserListForAdmin(pageParam, sortBy, keyword);
+        
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("records", result.getRecords());
+        response.put("total", result.getTotal());
+        response.put("current", result.getCurrent());
+        response.put("size", result.getSize());
+        response.put("pages", result.getPages());
+        
+        return response;
+    }
+
+    @Override
     @Transactional
     public boolean banUser(Long userId, Long adminId, String reason, int banDays) {
         log.info("封禁用户: userId={}, adminId={}, reason={}, banDays={}", userId, adminId, reason, banDays);

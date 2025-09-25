@@ -47,6 +47,28 @@ public interface AdminService {
     TransactionStats getTransactionStats(int days);
 
     /**
+     * 获取系统状态
+     *
+     * @return 系统状态信息
+     */
+    java.util.Map<String, Object> getSystemStatus();
+
+    /**
+     * 获取用户增长趋势数据
+     *
+     * @param days 统计天数
+     * @return 用户增长数据
+     */
+    java.util.List<java.util.Map<String, Object>> getUserGrowthTrend(int days);
+
+    /**
+     * 获取分类统计数据
+     *
+     * @return 分类统计
+     */
+    java.util.List<java.util.Map<String, Object>> getCategoryStats();
+
+    /**
      * 仪表盘统计数据
      */
     class DashboardStats {

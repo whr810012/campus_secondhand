@@ -256,7 +256,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import { getProductDetail, getRelatedProducts } from '@/api/product'
-import { addToFavorites, removeFromFavorites } from '@/api/favorite'
+import { addToFavorites, removeFromFavorites, checkFavorite } from '@/api/favorite'
 import { sendMessage } from '@/api/message'
 import { useUserStore } from '@/stores/user'
 
@@ -354,6 +354,11 @@ const fetchProductDetail = async () => {
     
     // 获取相关推荐
     fetchRelatedProducts()
+    
+    // 检查收藏状态
+    if (userStore.isLoggedIn) {
+      checkFavoriteStatus()
+    }
   } catch (err) {
     console.error('获取商品详情失败:', err)
     error.value = err.message || '获取商品详情失败'
@@ -370,6 +375,18 @@ const fetchRelatedProducts = async () => {
     relatedProducts.value = response.data || []
   } catch (error) {
     console.error('获取相关推荐失败:', error)
+  }
+}
+
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await checkFavorite(product.value.id)
+    console.log('response',response);
+    
+      isFavorited.value = response.data
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
   }
 }
 

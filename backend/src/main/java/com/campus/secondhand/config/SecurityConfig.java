@@ -59,6 +59,8 @@ public class SecurityConfig {
                 .antMatchers("/user/*/products").permitAll()
                 // 其他用户相关接口需要认证
                 .antMatchers("/user/**").authenticated()
+                // 消息相关接口需要认证
+                .antMatchers("/messages/**").authenticated()
                 // 其他请求需要认证
                 .anyRequest().authenticated()
             )

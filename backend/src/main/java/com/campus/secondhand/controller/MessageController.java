@@ -121,6 +121,47 @@ public class MessageController {
         }
     }
 
+    /**
+     * 获取用户消息列表
+     */
+    @GetMapping("/user")
+    public Result<Page<Message>> getUserMessages(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String readStatus,
+            @RequestParam(required = false) String type) {
+        Page<Message> messages = messageService.getUserMessages(userId, page, size, keyword, readStatus, type);
+        return Result.success(messages);
+    }
+
+    /**
+     * 标记所有消息为已读
+     */
+    @PutMapping("/read-all/{userId}")
+    public Result<Integer> markAllMessagesAsRead(@PathVariable Long userId) {
+        try {
+            int count = messageService.markAllMessagesAsRead(userId);
+            return Result.success(count);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 清空所有消息
+     */
+    @DeleteMapping("/clear/{userId}")
+    public Result<Integer> clearAllMessages(@PathVariable Long userId) {
+        try {
+            int count = messageService.clearAllMessages(userId);
+            return Result.success(count);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     // 内部类定义请求参数
     public static class SendMessageRequest {
         private Long senderId;

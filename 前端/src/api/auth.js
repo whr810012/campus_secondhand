@@ -114,7 +114,7 @@ export const getVerifyStatus = () => {
 // 修改密码
 export const changePassword = (data) => {
   return request({
-    url: '/auth/change-password',
+    url: '/user/change-password',
     method: 'post',
     data
   })

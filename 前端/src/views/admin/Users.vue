@@ -65,7 +65,6 @@
           <el-select v-model="filters.status" placeholder="全部状态" clearable @change="handleFilterChange">
             <el-option label="全部" value="" />
             <el-option label="活跃" value="active" />
-            <el-option label="待审核" value="pending" />
             <el-option label="已封禁" value="banned" />
           </el-select>
         </el-form-item>
@@ -78,13 +77,15 @@
           </el-select>
         </el-form-item>
         
+        <!-- 暂时禁用学校筛选，后端接口暂不支持 -->
         <el-form-item label="学校">
-          <el-select v-model="filters.school" placeholder="全部学校" clearable filterable @change="handleFilterChange">
+          <el-select v-model="filters.school" placeholder="全部学校" clearable filterable disabled>
             <el-option label="全部" value="" />
             <el-option v-for="school in schools" :key="school" :label="school" :value="school" />
           </el-select>
         </el-form-item>
         
+        <!-- 暂时禁用日期筛选，后端接口暂不支持 -->
         <el-form-item label="注册时间">
           <el-date-picker
             v-model="filters.dateRange"
@@ -92,7 +93,7 @@
             range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
-            @change="handleFilterChange"
+            disabled
           />
         </el-form-item>
         
@@ -131,9 +132,9 @@
               <div class="user-details">
                 <div class="user-name">
                   {{ row.nickname }}
-                  <el-tag v-if="row.is_verified" type="success" size="small">已认证</el-tag>
+                  <el-tag v-if="row.verifyStatus === 2" type="success" size="small">已认证</el-tag>
                 </div>
-                <div class="user-email">{{ row.email }}</div>
+                <div class="user-phone">{{ row.phone }}</div>
               </div>
             </div>
           </template>
@@ -141,7 +142,11 @@
         
         <el-table-column prop="phone" label="手机号" width="120" />
         
-        <el-table-column prop="school" label="学校" width="120" />
+        <el-table-column label="学校" width="120">
+          <template #default="{ row }">
+            {{ getSchoolName(row.schoolId) }}
+          </template>
+        </el-table-column>
         
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -151,13 +156,13 @@
         
         <el-table-column label="注册时间" width="160">
           <template #default="{ row }">
-            {{ formatTime(row.created_at) }}
+            {{ formatTime(row.createdAt) }}
           </template>
         </el-table-column>
         
         <el-table-column label="最后登录" width="160">
           <template #default="{ row }">
-            {{ formatTime(row.last_login_at) }}
+            {{ formatTime(row.lastLoginTime) }}
           </template>
         </el-table-column>
         
@@ -168,10 +173,10 @@
             </el-button>
             <el-button 
               size="small" 
-              :type="row.status === 'active' ? 'warning' : 'success'"
+              :type="row.status === 0 ? 'warning' : 'success'"
               @click="toggleUserStatus(row)"
             >
-              {{ row.status === 'active' ? '封禁' : '解封' }}
+              {{ row.status === 0 ? '封禁' : '解封' }}
             </el-button>
             <el-dropdown @command="(command) => handleUserAction(command, row)">
               <el-button size="small">
@@ -179,7 +184,7 @@
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="verify" v-if="!row.is_verified">认证用户</el-dropdown-item>
+                  <el-dropdown-item command="verify" v-if="row.verifyStatus !== 2">认证用户</el-dropdown-item>
                   <el-dropdown-item command="reset-password">重置密码</el-dropdown-item>
                   <el-dropdown-item command="send-message">发送消息</el-dropdown-item>
                   <el-dropdown-item command="delete" divided>删除用户</el-dropdown-item>
@@ -221,10 +226,10 @@
           </el-avatar>
           <div class="user-info">
             <h3>{{ currentUser.nickname }}</h3>
-            <p>{{ currentUser.email }}</p>
+            <p>{{ currentUser.phone }}</p>
             <div class="user-tags">
               <el-tag :type="getStatusType(currentUser.status)">{{ getStatusText(currentUser.status) }}</el-tag>
-              <el-tag v-if="currentUser.is_verified" type="success">已认证</el-tag>
+              <el-tag v-if="currentUser.verifyStatus === 2" type="success">已认证</el-tag>
             </div>
           </div>
         </div>
@@ -233,12 +238,14 @@
           <el-descriptions :column="2" border>
             <el-descriptions-item label="用户ID">{{ currentUser.id }}</el-descriptions-item>
             <el-descriptions-item label="手机号">{{ currentUser.phone || '未填写' }}</el-descriptions-item>
-            <el-descriptions-item label="学校">{{ currentUser.school || '未填写' }}</el-descriptions-item>
-            <el-descriptions-item label="学号">{{ currentUser.student_id || '未填写' }}</el-descriptions-item>
-            <el-descriptions-item label="注册时间">{{ formatTime(currentUser.created_at) }}</el-descriptions-item>
-            <el-descriptions-item label="最后登录">{{ formatTime(currentUser.last_login_at) }}</el-descriptions-item>
-            <el-descriptions-item label="发布商品数">{{ currentUser.product_count || 0 }}</el-descriptions-item>
-            <el-descriptions-item label="交易次数">{{ currentUser.order_count || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="学校">{{ getSchoolName(currentUser.schoolId) }}</el-descriptions-item>
+            <el-descriptions-item label="学号">{{ currentUser.studentId || '未填写' }}</el-descriptions-item>
+            <el-descriptions-item label="真实姓名">{{ currentUser.realName || '未填写' }}</el-descriptions-item>
+            <el-descriptions-item label="信誉分数">{{ currentUser.creditScore || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="注册时间">{{ formatTime(currentUser.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="最后登录">{{ formatTime(currentUser.lastLoginTime) }}</el-descriptions-item>
+            <el-descriptions-item label="交易次数">{{ currentUser.tradeCount || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="好评率">{{ currentUser.goodRate || 0 }}%</el-descriptions-item>
           </el-descriptions>
         </div>
       </div>
@@ -260,14 +267,35 @@ import {
   ArrowDown
 } from '@element-plus/icons-vue'
 import {
-  getUsers,
-  getUserStats,
-  updateUserStatus,
-  verifyUser,
-  deleteUser,
-  resetUserPassword,
-  exportUsersData
-} from '@/api/admin/user'
+  getUserList as getUsers,
+  getUserStats
+} from '@/api/admin'
+
+// 临时模拟函数，直到后端API实现
+const updateUserStatus = async (userId, status) => {
+  ElMessage.warning('用户状态更新功能暂未实现')
+  return Promise.resolve()
+}
+
+const verifyUser = async (userId) => {
+  ElMessage.warning('用户验证功能暂未实现')
+  return Promise.resolve()
+}
+
+const deleteUser = async (userId) => {
+  ElMessage.warning('删除用户功能暂未实现')
+  return Promise.resolve()
+}
+
+const resetUserPassword = async (userId) => {
+  ElMessage.warning('重置密码功能暂未实现')
+  return Promise.resolve()
+}
+
+const exportUsersData = async () => {
+  ElMessage.warning('导出用户数据功能暂未实现')
+  return Promise.resolve()
+}
 import dayjs from 'dayjs'
 
 // 响应式数据
@@ -307,22 +335,50 @@ const schools = ref([
   '南京大学'
 ])
 
+// 学校ID映射
+const schoolMap = {
+  1: '清华大学',
+  2: '北京大学', 
+  3: '复旦大学',
+  4: '上海交通大学',
+  5: '浙江大学',
+  6: '南京大学',
+  7: '中山大学',
+  8: '华南理工大学',
+  9: '暨南大学'
+}
+
 // 获取用户列表
 const fetchUsers = async () => {
   try {
     loading.value = true
+    
+    // 映射前端筛选条件到后端支持的参数
     const params = {
       page: currentPage.value,
-      size: pageSize.value,
-      status: filters.status,
-      is_verified: filters.verified === '' ? undefined : filters.verified === 'true',
-      school: filters.school,
-      keyword: filters.keyword,
-      start_date: filters.dateRange?.[0],
-      end_date: filters.dateRange?.[1]
+      size: pageSize.value
     }
     
+    // 添加关键词搜索
+    if (filters.keyword && filters.keyword.trim()) {
+      params.keyword = filters.keyword.trim()
+    }
+    
+    // 状态映射：前端使用小写，后端使用大写
+    if (filters.status && filters.status !== '') {
+      params.status = filters.status.toUpperCase()
+    }
+    
+    // 认证状态映射：前端使用字符串，后端使用字符串格式的数字
+    if (filters.verified && filters.verified !== '') {
+      params.verifyStatus = filters.verified === 'true' ? '2' : '0'
+    }
+    
+    console.log('发送的筛选参数:', params) // 调试日志
+    
     const response = await getUsers(params)
+    console.log('接收到的响应:', response) // 调试日志
+    
     // MyBatis Plus Page对象结构：records为数据列表
     users.value = response.data.records || []
     total.value = response.data.total || 0
@@ -338,7 +394,11 @@ const fetchUsers = async () => {
 const fetchStats = async () => {
   try {
     const response = await getUserStats()
-    Object.assign(stats, response.data)
+    // 映射API返回的字段到本地stats对象
+    stats.total = response.data.totalCount || 0
+    stats.active = response.data.activeCount || 0
+    stats.banned = response.data.bannedCount || 0
+    stats.pending = response.data.totalCount - response.data.verifiedCount || 0 // 总数减去已认证数量作为待审核数量
   } catch (error) {
     console.error('获取统计数据失败:', error)
   }
@@ -381,8 +441,8 @@ const viewUser = (user) => {
 
 // 切换用户状态
 const toggleUserStatus = async (user) => {
-  const action = user.status === 'active' ? '封禁' : '解封'
-  const newStatus = user.status === 'active' ? 'banned' : 'active'
+  const action = user.status === 0 ? '封禁' : '解封'
+  const newStatus = user.status === 0 ? 1 : 0
   
   try {
     await ElMessageBox.confirm(
@@ -429,7 +489,7 @@ const handleUserAction = async (command, user) => {
 const verifyUserAction = async (user) => {
   try {
     await verifyUser(user.id)
-    user.is_verified = true
+    user.verifyStatus = 2
     ElMessage.success('用户认证成功')
   } catch (error) {
     console.error('认证失败:', error)
@@ -502,7 +562,7 @@ const batchVerify = async () => {
     await Promise.all(promises)
     
     selectedUsers.value.forEach(user => {
-      user.is_verified = true
+      user.verifyStatus = 2
     })
     
     ElMessage.success('批量认证成功')
@@ -531,7 +591,7 @@ const batchBan = async () => {
     await Promise.all(promises)
     
     selectedUsers.value.forEach(user => {
-      user.status = 'banned'
+      user.status = 1
     })
     
     ElMessage.success('批量封禁成功')
@@ -597,12 +657,16 @@ const refreshData = () => {
   fetchStats()
 }
 
+// 获取学校名称
+const getSchoolName = (schoolId) => {
+  return schoolMap[schoolId] || '未知学校'
+}
+
 // 获取状态类型
 const getStatusType = (status) => {
   const statusMap = {
-    active: 'success',
-    pending: 'warning',
-    banned: 'danger'
+    0: 'success',  // 正常
+    1: 'danger'    // 禁用
   }
   return statusMap[status] || 'info'
 }
@@ -610,9 +674,8 @@ const getStatusType = (status) => {
 // 获取状态文本
 const getStatusText = (status) => {
   const statusMap = {
-    active: '活跃',
-    pending: '待审核',
-    banned: '已封禁'
+    0: '正常',
+    1: '已封禁'
   }
   return statusMap[status] || '未知'
 }

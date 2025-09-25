@@ -27,14 +27,23 @@ public class UserManageController {
      * 分页查询用户列表
      */
     @GetMapping
-    public Result<Page<User>> getUserList(
+    public Result<?> getUserList(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String verifyStatus) {
-        Page<User> users = userManageService.getUserList(page, size, keyword, status, verifyStatus);
-        return Result.success(users);
+            @RequestParam(required = false) String verifyStatus,
+            @RequestParam(required = false) String sortBy) {
+        
+        // 如果有sortBy参数，使用管理员接口
+        if (sortBy != null && !sortBy.isEmpty()) {
+            java.util.Map<String, Object> result = userManageService.getUserList(page, size, sortBy, keyword);
+            return Result.success(result);
+        } else {
+            // 否则使用原有接口
+            Page<User> users = userManageService.getUserList(page, size, keyword, status, verifyStatus);
+            return Result.success(users);
+        }
     }
 
     /**

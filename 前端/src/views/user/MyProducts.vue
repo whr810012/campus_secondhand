@@ -100,9 +100,6 @@
               >
                 标记已售
               </el-button>
-              <el-button size="small" @click="promoteProduct(product)">
-                置顶
-              </el-button>
             </div>
           </div>
         </el-col>
@@ -135,7 +132,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, View, Edit, Delete } from '@element-plus/icons-vue'
-import { getUserProducts, updateProductStatus, deleteProduct as deleteProductApi, promoteProduct as promoteProductApi } from '@/api/product'
+import { getMyProducts, updateProductStatus, deleteProduct as deleteProductApi, promoteProduct as promoteProductApi } from '@/api/product'
 import dayjs from 'dayjs'
 
 // 响应式数据
@@ -152,6 +149,7 @@ const sortBy = ref('created_at')
 const fetchProducts = async () => {
   try {
     loading.value = true
+    
     const params = {
       page: currentPage.value,
       size: pageSize.value,
@@ -161,7 +159,7 @@ const fetchProducts = async () => {
       sort_order: 'desc'
     }
     
-    const response = await getUserProducts(params)
+    const response = await getMyProducts(params)
     // MyBatis Plus Page对象结构：records为数据列表
     products.value = response.data.records || []
     total.value = response.data.total || 0

@@ -105,4 +105,15 @@ public interface OrderService {
      * @return 订单分页数据
      */
     Page<Order> getAllOrders(int page, int size, String status, String keyword);
+
+    /**
+     * 管理员获取订单列表
+     *
+     * @param page 页码
+     * @param size 每页大小
+     * @param status 订单状态
+     * @param keyword 搜索关键词
+     * @return 订单分页数据
+     */
+    Page<Order> getOrderListForAdmin(int page, int size, String status, String keyword);
 }
