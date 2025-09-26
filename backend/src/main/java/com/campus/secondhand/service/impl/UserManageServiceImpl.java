@@ -162,6 +162,51 @@ public class UserManageServiceImpl implements UserManageService {
     }
 
     @Override
+    @Transactional
+    public int batchUnbanUsers(List<Long> userIds, Long adminId) {
+        log.info("批量解封用户: userIds={}, adminId={}", userIds, adminId);
+        
+        if (userIds == null || userIds.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // 验证管理员权限
+            User admin = userMapper.selectById(adminId);
+            if (admin == null || !"ADMIN".equals(admin.getRole())) {
+                log.warn("管理员权限验证失败: adminId={}", adminId);
+                throw new RuntimeException("管理员权限验证失败");
+            }
+
+            int successCount = 0;
+            for (Long userId : userIds) {
+                try {
+                    // 验证用户是否存在
+                    User user = userMapper.selectById(userId);
+                    if (user == null || user.getDeleted() == 1) {
+                        log.warn("用户不存在或已删除: userId={}", userId);
+                        continue;
+                    }
+
+                    int result = userManageMapper.unbanUser(userId);
+                    if (result > 0) {
+                        successCount++;
+                        log.info("用户解封成功: userId={}", userId);
+                    }
+                } catch (Exception e) {
+                    log.error("解封用户失败: userId={}", userId, e);
+                }
+            }
+
+            log.info("批量解封完成: 总数={}, 成功={}", userIds.size(), successCount);
+            return successCount;
+        } catch (Exception e) {
+            log.error("批量解封用户失败", e);
+            throw new RuntimeException("批量解封用户失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public Page<User> getPendingVerifications(int page, int size, String keyword) {
         log.info("分页查询待审核的学生身份认证: page={}, size={}, keyword={}", page, size, keyword);
         

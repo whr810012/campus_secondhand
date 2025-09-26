@@ -68,6 +68,15 @@ public interface UserManageService {
     int batchBanUsers(List<Long> userIds, Long adminId, String reason, int banDays);
 
     /**
+     * 批量解封用户
+     *
+     * @param userIds 用户ID列表
+     * @param adminId 管理员ID
+     * @return 成功解封的用户数量
+     */
+    int batchUnbanUsers(List<Long> userIds, Long adminId);
+
+    /**
      * 分页查询待审核的学生身份认证
      *
      * @param page 页码

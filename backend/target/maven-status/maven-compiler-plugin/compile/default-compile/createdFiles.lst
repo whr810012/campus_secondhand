@@ -98,6 +98,7 @@ com\campus\secondhand\service\SchoolService.class
 com\campus\secondhand\entity\Review.class
 com\campus\secondhand\service\AdminService$ProductStats.class
 com\campus\secondhand\util\JwtUtil.class
+com\campus\secondhand\controller\UserManageController$BatchUnbanUsersRequest.class
 com\campus\secondhand\service\ProductManageService$ProductStats.class
 com\campus\secondhand\controller\UserManageController$BatchVerifyIdentityRequest.class
 com\campus\secondhand\controller\AuditController$BatchAuditReviewRequest.class

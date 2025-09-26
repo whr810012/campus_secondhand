@@ -58,60 +58,7 @@
       </div>
     </div>
 
-    <!-- 筛选和搜索 -->
-    <div class="filter-section">
-      <el-form :model="filters" inline class="filter-form">
-        <el-form-item label="用户状态">
-          <el-select v-model="filters.status" placeholder="全部状态" clearable @change="handleFilterChange">
-            <el-option label="全部" value="" />
-            <el-option label="活跃" value="active" />
-            <el-option label="已封禁" value="banned" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="认证状态">
-          <el-select v-model="filters.verified" placeholder="全部认证" clearable @change="handleFilterChange">
-            <el-option label="全部" value="" />
-            <el-option label="已认证" value="true" />
-            <el-option label="未认证" value="false" />
-          </el-select>
-        </el-form-item>
-        
-        <!-- 暂时禁用学校筛选，后端接口暂不支持 -->
-        <el-form-item label="学校">
-          <el-select v-model="filters.school" placeholder="全部学校" clearable filterable disabled>
-            <el-option label="全部" value="" />
-            <el-option v-for="school in schools" :key="school" :label="school" :value="school" />
-          </el-select>
-        </el-form-item>
-        
-        <!-- 暂时禁用日期筛选，后端接口暂不支持 -->
-        <el-form-item label="注册时间">
-          <el-date-picker
-            v-model="filters.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            disabled
-          />
-        </el-form-item>
-        
-        <el-form-item>
-          <el-input
-            v-model="filters.keyword"
-            placeholder="搜索用户名、邮箱、手机号"
-            style="width: 250px"
-            clearable
-            @change="handleSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
-      </el-form>
-    </div>
+
 
     <!-- 用户列表 -->
     <div class="users-table">
@@ -200,6 +147,7 @@
         <span>已选择 {{ selectedUsers.length }} 个用户</span>
         <el-button size="small" @click="batchVerify">批量认证</el-button>
         <el-button size="small" type="warning" @click="batchBan">批量封禁</el-button>
+        <el-button size="small" type="success" @click="batchUnban">批量解封</el-button>
         <el-button size="small" type="danger" @click="batchDelete">批量删除</el-button>
       </div>
       
@@ -263,18 +211,52 @@ import {
   UserFilled,
   Clock,
   Lock,
-  Search,
   ArrowDown
 } from '@element-plus/icons-vue'
 import {
   getUserList as getUsers,
-  getUserStats
+  getUserStats,
+  banUser,
+  unbanUser,
+  batchBanUsers,
+  batchUnbanUsers
 } from '@/api/admin'
+import { useUserStore } from '@/stores/user'
 
-// 临时模拟函数，直到后端API实现
+// 获取用户store
+const userStore = useUserStore()
+
+// 更新用户状态（封禁/解封）
 const updateUserStatus = async (userId, status) => {
-  ElMessage.warning('用户状态更新功能暂未实现')
-  return Promise.resolve()
+  try {
+    const adminId = userStore.userInfo?.id
+    if (!adminId) {
+      ElMessage.error('无法获取管理员信息')
+      return
+    }
+
+    if (status === 'banned') {
+       // 封禁用户
+       await banUser(userId, {
+         adminId: adminId,
+         reason: '管理员操作',
+         banDays: 30  // 默认封禁30天
+       })
+       ElMessage.success('用户封禁成功')
+    } else if (status === 'active') {
+       // 解封用户
+       await unbanUser(userId, {
+         adminId: adminId
+       })
+       ElMessage.success('用户解封成功')
+    }
+    
+    // 刷新用户列表
+    await fetchUsers()
+  } catch (error) {
+    console.error('更新用户状态失败:', error)
+    ElMessage.error(error.response?.data?.message || '操作失败')
+  }
 }
 
 const verifyUser = async (userId) => {
@@ -316,24 +298,7 @@ const stats = reactive({
   banned: 0
 })
 
-// 筛选条件
-const filters = reactive({
-  status: '',
-  verified: '',
-  school: '',
-  dateRange: null,
-  keyword: ''
-})
 
-// 学校列表
-const schools = ref([
-  '清华大学',
-  '北京大学',
-  '复旦大学',
-  '上海交通大学',
-  '浙江大学',
-  '南京大学'
-])
 
 // 学校ID映射
 const schoolMap = {
@@ -353,31 +318,12 @@ const fetchUsers = async () => {
   try {
     loading.value = true
     
-    // 映射前端筛选条件到后端支持的参数
     const params = {
       page: currentPage.value,
       size: pageSize.value
     }
     
-    // 添加关键词搜索
-    if (filters.keyword && filters.keyword.trim()) {
-      params.keyword = filters.keyword.trim()
-    }
-    
-    // 状态映射：前端使用小写，后端使用大写
-    if (filters.status && filters.status !== '') {
-      params.status = filters.status.toUpperCase()
-    }
-    
-    // 认证状态映射：前端使用字符串，后端使用字符串格式的数字
-    if (filters.verified && filters.verified !== '') {
-      params.verifyStatus = filters.verified === 'true' ? '2' : '0'
-    }
-    
-    console.log('发送的筛选参数:', params) // 调试日志
-    
     const response = await getUsers(params)
-    console.log('接收到的响应:', response) // 调试日志
     
     // MyBatis Plus Page对象结构：records为数据列表
     users.value = response.data.records || []
@@ -404,17 +350,7 @@ const fetchStats = async () => {
   }
 }
 
-// 筛选变化
-const handleFilterChange = () => {
-  currentPage.value = 1
-  fetchUsers()
-}
 
-// 搜索
-const handleSearch = () => {
-  currentPage.value = 1
-  fetchUsers()
-}
 
 // 分页
 const handleSizeChange = (size) => {
@@ -442,7 +378,7 @@ const viewUser = (user) => {
 // 切换用户状态
 const toggleUserStatus = async (user) => {
   const action = user.status === 0 ? '封禁' : '解封'
-  const newStatus = user.status === 0 ? 1 : 0
+  const newStatus = user.status === 0 ? 'banned' : 'active'
   
   try {
     await ElMessageBox.confirm(
@@ -456,8 +392,7 @@ const toggleUserStatus = async (user) => {
     )
     
     await updateUserStatus(user.id, newStatus)
-    user.status = newStatus
-    ElMessage.success(`${action}成功`)
+    // 状态会在updateUserStatus中通过fetchUsers刷新，不需要手动设置
     fetchStats()
   } catch (error) {
     if (error !== 'cancel') {
@@ -587,19 +522,66 @@ const batchBan = async () => {
       }
     )
     
-    const promises = selectedUsers.value.map(user => updateUserStatus(user.id, 'banned'))
-    await Promise.all(promises)
+    const adminId = userStore.userInfo?.id
+    if (!adminId) {
+      ElMessage.error('无法获取管理员信息')
+      return
+    }
     
-    selectedUsers.value.forEach(user => {
-      user.status = 1
-    })
+    // 使用批量封禁API
+     await batchBanUsers({
+       userIds: selectedUsers.value.map(user => user.id),
+       adminId: adminId,
+       reason: '管理员批量操作',
+       banDays: 30  // 默认封禁30天
+     })
     
     ElMessage.success('批量封禁成功')
-    fetchStats()
+    selectedUsers.value = []
+    await fetchUsers()
+    await fetchStats()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('批量封禁失败:', error)
-      ElMessage.error('批量封禁失败')
+      ElMessage.error(error.response?.data?.message || '批量封禁失败')
+    }
+  }
+}
+
+// 批量解封
+const batchUnban = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要解封选中的 ${selectedUsers.value.length} 个用户吗？`,
+      '确认批量解封',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+    
+    const adminId = userStore.userInfo?.id
+     if (!adminId) {
+       ElMessage.error('无法获取管理员信息')
+       return
+     }
+     
+     // 使用批量解封API
+    await batchUnbanUsers({
+      userIds: selectedUsers.value.map(user => user.id),
+      adminId: adminId,
+      reason: '管理员批量操作'
+    })
+    
+    ElMessage.success('批量解封成功')
+    selectedUsers.value = []
+    await fetchUsers()
+    await fetchStats()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量解封失败:', error)
+      ElMessage.error(error.response?.data?.message || '批量解封失败')
     }
   }
 }
@@ -634,7 +616,7 @@ const batchDelete = async () => {
 // 导出用户
 const exportUsers = async () => {
   try {
-    const response = await exportUsersData(filters)
+    const response = await exportUsersData()
     // 处理文件下载
     const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const url = window.URL.createObjectURL(blob)
@@ -687,7 +669,9 @@ const formatTime = (time) => {
 }
 
 // 组件挂载
-onMounted(() => {
+onMounted(async () => {
+  // 初始化用户信息
+  await userStore.initUserInfo()
   fetchUsers()
   fetchStats()
 })
@@ -772,19 +756,7 @@ onMounted(() => {
     }
   }
   
-  .filter-section {
-    background: var(--bg-primary);
-    border-radius: var(--border-radius-large);
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: var(--box-shadow-light);
-    
-    .filter-form {
-      .el-form-item {
-        margin-bottom: 0;
-      }
-    }
-  }
+
   
   .users-table {
     background: var(--bg-primary);

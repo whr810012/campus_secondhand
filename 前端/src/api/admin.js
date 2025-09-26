@@ -138,3 +138,39 @@ export const getOrderList = (params) => {
     params
   })
 }
+
+// 封禁用户
+export const banUser = (userId, data) => {
+  return request({
+    url: `/admin/users/${userId}/ban`,
+    method: 'post',
+    data
+  })
+}
+
+// 解封用户
+export const unbanUser = (userId, data) => {
+  return request({
+    url: `/admin/users/${userId}/unban`,
+    method: 'post',
+    data
+  })
+}
+
+// 批量封禁用户
+export const batchBanUsers = (data) => {
+  return request({
+    url: '/admin/users/batch-ban',
+    method: 'post',
+    data
+  })
+}
+
+// 批量解封用户
+export const batchUnbanUsers = (data) => {
+  return request({
+    url: '/admin/users/batch-unban',
+    method: 'post',
+    data
+  })
+}

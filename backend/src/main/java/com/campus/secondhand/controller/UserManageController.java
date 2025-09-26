@@ -120,6 +120,19 @@ public class UserManageController {
         }
     }
 
+    @PostMapping("/batch-unban")
+    public Result<Integer> batchUnbanUsers(@RequestBody BatchUnbanUsersRequest request) {
+        try {
+            int successCount = userManageService.batchUnbanUsers(
+                request.getUserIds(),
+                request.getAdminId()
+            );
+            return Result.success(successCount);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     /**
      * 分页查询待审核的学生身份认证
      */
@@ -267,6 +280,16 @@ public class UserManageController {
     public static class ResetPasswordRequest {
         private Long adminId;
 
+        public Long getAdminId() { return adminId; }
+        public void setAdminId(Long adminId) { this.adminId = adminId; }
+    }
+
+    public static class BatchUnbanUsersRequest {
+        private List<Long> userIds;
+        private Long adminId;
+
+        public List<Long> getUserIds() { return userIds; }
+        public void setUserIds(List<Long> userIds) { this.userIds = userIds; }
         public Long getAdminId() { return adminId; }
         public void setAdminId(Long adminId) { this.adminId = adminId; }
     }

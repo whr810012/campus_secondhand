@@ -48,6 +48,7 @@ D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\service
 D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\service\impl\FavoriteServiceImpl.java
 D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\service\ProductService.java
 D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\controller\AdminController.java
+D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\config\MybatisPlusConfig.java
 D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\mapper\AuditMapper.java
 D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\service\impl\OrderServiceImpl.java
 D:\codetwo\campus_secondhand\backend\src\main\java\com\campus\secondhand\service\impl\SchoolServiceImpl.java
