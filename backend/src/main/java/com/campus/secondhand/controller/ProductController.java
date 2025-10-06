@@ -141,6 +141,29 @@ public class ProductController {
     }
 
     /**
+     * 更新商品状态
+     *
+     * @param id 商品ID
+     * @param statusRequest 状态更新请求
+     * @return 更新结果
+     */
+    @PutMapping("/{id}/status")
+    public Result<Void> updateProductStatus(
+            @PathVariable Long id,
+            @RequestBody StatusUpdateRequest statusRequest) {
+        try {
+            boolean success = productService.updateProductStatus(id, statusRequest.getStatus());
+            if (success) {
+                return Result.success();
+            } else {
+                return Result.error("更新商品状态失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 获取相关商品推荐
      *
      * @param id 商品ID
@@ -156,6 +179,21 @@ public class ProductController {
             return Result.success(relatedProducts);
         } catch (Exception e) {
             return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 状态更新请求类
+     */
+    public static class StatusUpdateRequest {
+        private String status;
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
         }
     }
 }

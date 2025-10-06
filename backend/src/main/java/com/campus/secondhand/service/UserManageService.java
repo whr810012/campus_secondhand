@@ -133,6 +133,24 @@ public interface UserManageService {
     String resetUserPassword(Long userId, Long adminId);
 
     /**
+     * 删除用户（软删除）
+     *
+     * @param userId 用户ID
+     * @param adminId 管理员ID
+     * @return 是否成功
+     */
+    boolean deleteUser(Long userId, Long adminId);
+
+    /**
+     * 批量删除用户（软删除）
+     *
+     * @param userIds 用户ID列表
+     * @param adminId 管理员ID
+     * @return 成功删除的用户数量
+     */
+    int batchDeleteUsers(List<Long> userIds, Long adminId);
+
+    /**
      * 用户详细信息
      */
     class UserDetail {

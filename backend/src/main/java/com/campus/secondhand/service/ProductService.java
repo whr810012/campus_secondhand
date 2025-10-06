@@ -87,4 +87,13 @@ public interface ProductService {
      * @return 用户商品分页数据
      */
     Page<Product> getUserProducts(Long userId, int page, int size, String status);
+
+    /**
+     * 更新商品状态
+     *
+     * @param productId 商品ID
+     * @param status 新状态
+     * @return 更新结果
+     */
+    boolean updateProductStatus(Long productId, String status);
 }

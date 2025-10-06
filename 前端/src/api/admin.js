@@ -57,6 +57,14 @@ export const getUserList = (params) => {
   })
 }
 
+// 获取用户详细信息
+export const getUserDetail = (userId) => {
+  return request({
+    url: `/admin/users/${userId}`,
+    method: 'get'
+  })
+}
+
 // 分页查询商品列表
 export const getProductList = (params) => {
   return request({
@@ -78,7 +86,7 @@ export const getPendingProducts = (params) => {
 // 审核商品通过
 export const approveProduct = (productId, data) => {
   return request({
-    url: `/admin/audit/products/${productId}/approve`,
+    url: `/admin/products/${productId}/approve`,
     method: 'post',
     data
   })
@@ -87,9 +95,12 @@ export const approveProduct = (productId, data) => {
 // 审核商品拒绝
 export const rejectProduct = (productId, data) => {
   return request({
-    url: `/admin/audit/products/${productId}/reject`,
+    url: `/admin/products/${productId}/reject`,
     method: 'post',
-    data
+    params: {
+      adminId: data.adminId,
+      reason: data.reason
+    }
   })
 }
 
@@ -172,5 +183,68 @@ export const batchUnbanUsers = (data) => {
     url: '/admin/users/batch-unban',
     method: 'post',
     data
+  })
+}
+
+// 删除用户
+export const deleteUser = (userId, data) => {
+  return request({
+    url: `/admin/users/${userId}`,
+    method: 'delete',
+    data
+  })
+}
+
+// 批量删除用户
+export const batchDeleteUsers = (data) => {
+  return request({
+    url: '/admin/users/batch-delete',
+    method: 'post',
+    data
+  })
+}
+
+// 获取待审核的学生身份认证列表
+export const getPendingVerifications = (params) => {
+  return request({
+    url: '/admin/users/pending-verifications',
+    method: 'get',
+    params
+  })
+}
+
+// 审核学生身份认证
+export const verifyStudentIdentity = (userId, data) => {
+  return request({
+    url: `/admin/users/verifications/${userId}`,
+    method: 'post',
+    data
+  })
+}
+
+// 批量认证学生身份
+export const batchVerifyStudentIdentity = (data) => {
+  return request({
+    url: '/admin/users/verifications/batch',
+    method: 'post',
+    data
+  })
+}
+
+// 根据ID获取图片
+export const getImageById = (imageId) => {
+  return request({
+    url: `/upload/image/${imageId}`,
+    method: 'get',
+    responseType: 'blob' // 获取二进制数据
+  })
+}
+
+// 导出用户数据
+export const exportUsersData = () => {
+  return request({
+    url: '/admin/users/export',
+    method: 'get',
+    responseType: 'blob'
   })
 }

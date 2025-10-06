@@ -284,7 +284,13 @@ const productImages = computed(() => {
 
 // 计算属性：获取当前商品状态数值
 const currentStatus = computed(() => {
-  return getStatusFromString(product.value?.status)
+  const status = product.value?.status
+  // 如果是字符串状态，直接判断是否为'available'
+  if (typeof status === 'string') {
+    return status.toLowerCase() === 'available' ? 1 : 0
+  }
+  // 如果是数字状态，按原逻辑处理
+  return getStatusFromString(status)
 })
 
 // 计算属性：获取商品标签
@@ -422,18 +428,30 @@ const getConditionType = (condition) => {
 // 将字符串状态转换为数字状态
 const getStatusFromString = (status) => {
   const statusMap = {
-    'pending': 0,
-    'active': 1,
-    'sold': 2,
-    'inactive': 3,
-    'rejected': 4
+    'available': 1,    // 可售 -> 在售
+    'reserved': 0,     // 已预定 -> 待确认
+    'sold': 2,         // 已售出 -> 已售出
+    'unavailable': 3,  // 已下架 -> 已下架
+    'pending': 0       // 待审核 -> 审核中
   }
   return typeof status === 'string' ? statusMap[status.toLowerCase()] ?? 0 : status
 }
 
 // 获取状态文本
 const getStatusText = (status) => {
-  const numStatus = typeof status === 'string' ? getStatusFromString(status) : status
+  // 如果是字符串状态，直接映射
+  if (typeof status === 'string') {
+    const statusTextMap = {
+      'available': '在售',
+      'reserved': '已预定',
+      'sold': '已售出',
+      'unavailable': '已下架',
+      'pending': '审核中'
+    }
+    return statusTextMap[status.toLowerCase()] || '未知状态'
+  }
+  
+  // 如果是数字状态，按原逻辑处理
   const statusMap = {
     0: '审核中',
     1: '在售',
@@ -441,12 +459,24 @@ const getStatusText = (status) => {
     3: '已下架',
     4: '审核不通过'
   }
-  return statusMap[numStatus] || '未知状态'
+  return statusMap[status] || '未知状态'
 }
 
 // 获取状态类型
 const getStatusType = (status) => {
-  const numStatus = typeof status === 'string' ? getStatusFromString(status) : status
+  // 如果是字符串状态，直接映射
+  if (typeof status === 'string') {
+    const statusTypeMap = {
+      'available': 'success',
+      'reserved': 'warning',
+      'sold': 'info',
+      'unavailable': 'warning',
+      'pending': 'warning'
+    }
+    return statusTypeMap[status.toLowerCase()] || 'info'
+  }
+  
+  // 如果是数字状态，按原逻辑处理
   const typeMap = {
     0: 'warning',
     1: 'success',
@@ -454,7 +484,7 @@ const getStatusType = (status) => {
     3: 'warning',
     4: 'error'
   }
-  return typeMap[numStatus] || 'info'
+  return typeMap[status] || 'info'
 }
 
 // 格式化日期

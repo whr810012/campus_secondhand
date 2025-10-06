@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
  * @author campus-secondhand
  */
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
@@ -25,16 +25,25 @@ public class OrderController {
      * 创建订单
      */
     @PostMapping
-    public Result<Order> createOrder(@RequestBody CreateOrderRequest request) {
+    public Result<Order> createOrder(@RequestBody CreateOrderRequest request, @RequestHeader("Authorization") String token) {
         try {
+            // 从token中解析买家ID
+            Long buyerId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (buyerId == null) {
+                return Result.error("无效的token");
+            }
+            
             Order order = orderService.createOrder(
                 request.getProductId(),
-                request.getBuyerId(),
+                buyerId,
+                request.getSellerId(),
+                request.getAmount(),
                 request.getTradeType(),
                 request.getTradeLocation(),
                 request.getDeliveryAddress(),
                 request.getReceiverName(),
                 request.getReceiverPhone(),
+                request.getPaymentMethod(),
                 request.getRemark()
             );
             return Result.success(order);
@@ -82,7 +91,7 @@ public class OrderController {
             return Result.error("无效的token");
         }
         
-        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, "");
+        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, keyword, startDate, endDate);
         return Result.success(orders);
     }
 
@@ -107,7 +116,7 @@ public class OrderController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, "");
+        Page<Order> orders = orderService.getUserOrders(userId, page, size, status, keyword, startDate, endDate);
         return Result.success(orders);
     }
 
@@ -202,11 +211,14 @@ public class OrderController {
     public static class CreateOrderRequest {
         private Long productId;
         private Long buyerId;
+        private Long sellerId;
+        private Double amount;
         private Integer tradeType;
         private String tradeLocation;
         private String deliveryAddress;
         private String receiverName;
         private String receiverPhone;
+        private String paymentMethod;
         private String remark;
 
         // Getters and Setters
@@ -214,6 +226,10 @@ public class OrderController {
         public void setProductId(Long productId) { this.productId = productId; }
         public Long getBuyerId() { return buyerId; }
         public void setBuyerId(Long buyerId) { this.buyerId = buyerId; }
+        public Long getSellerId() { return sellerId; }
+        public void setSellerId(Long sellerId) { this.sellerId = sellerId; }
+        public Double getAmount() { return amount; }
+        public void setAmount(Double amount) { this.amount = amount; }
         public Integer getTradeType() { return tradeType; }
         public void setTradeType(Integer tradeType) { this.tradeType = tradeType; }
         public String getTradeLocation() { return tradeLocation; }
@@ -224,6 +240,8 @@ public class OrderController {
         public void setReceiverName(String receiverName) { this.receiverName = receiverName; }
         public String getReceiverPhone() { return receiverPhone; }
         public void setReceiverPhone(String receiverPhone) { this.receiverPhone = receiverPhone; }
+        public String getPaymentMethod() { return paymentMethod; }
+        public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
         public String getRemark() { return remark; }
         public void setRemark(String remark) { this.remark = remark; }
     }

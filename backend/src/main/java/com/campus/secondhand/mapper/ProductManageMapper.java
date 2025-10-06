@@ -21,19 +21,29 @@ import java.util.List;
 public interface ProductManageMapper extends BaseMapper<Product> {
 
     /**
-     * 分页查询商品列表
+     * 分页查询商品列表（管理员接口，返回完整信息）
      */
     @Select({
         "<script>",
-        "SELECT p.*, u.username, c.name as category_name",
+        "SELECT p.*, ",
+        "       u.nickname as seller_nickname, ",
+        "       u.phone as seller_phone, ",
+        "       u.student_id as seller_student_id, ",
+        "       c.name as category_name, ",
+        "       auditor.nickname as auditor_name, ",
+        "       (SELECT COUNT(*) FROM favorites f WHERE f.product_id = p.id) as favorite_count, ",
+        "       (SELECT COUNT(*) FROM messages m WHERE m.product_id = p.id AND m.deleted = 0) as inquiry_count ",
         "FROM products p",
-        "LEFT JOIN users u ON p.user_id = u.id",
+        "LEFT JOIN users u ON p.seller_id = u.id",
         "LEFT JOIN categories c ON p.category_id = c.id",
+        "LEFT JOIN users auditor ON p.auditor_id = auditor.id",
         "WHERE p.deleted = 0",
         "<if test='keyword != null and keyword != \"\"'>",
         "  AND (p.title LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR p.description LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
-        "    OR u.username LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
+        "    OR u.nickname LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "    OR u.phone LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "    OR u.student_id LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
         "</if>",
         "<if test='status != null and status != \"\"'>",
         "  AND p.status = #{status}",
@@ -45,7 +55,7 @@ public interface ProductManageMapper extends BaseMapper<Product> {
         "  AND p.category_id = #{categoryId}",
         "</if>",
         "<if test='userId != null'>",
-        "  AND p.user_id = #{userId}",
+        "  AND p.seller_id = #{userId}",
         "</if>",
         "ORDER BY p.created_at DESC",
         "</script>"
@@ -109,13 +119,13 @@ public interface ProductManageMapper extends BaseMapper<Product> {
      * 获取商品详细信息
      */
     @Select({
-        "SELECT p.*, u.username, u.phone as user_phone,",
+        "SELECT p.*, u.nickname, u.phone as user_phone,",
         "  (SELECT COUNT(*) FROM product_views pv WHERE pv.product_id = p.id) as view_count,",
         "  (SELECT COUNT(*) FROM favorites f WHERE f.product_id = p.id AND f.deleted = 0) as favorite_count,",
         "  (SELECT COUNT(*) FROM messages m WHERE m.product_id = p.id AND m.deleted = 0) as inquiry_count,",
         "  (SELECT MAX(pv.created_at) FROM product_views pv WHERE pv.product_id = p.id) as last_view_time",
         "FROM products p",
-        "LEFT JOIN users u ON p.user_id = u.id",
+        "LEFT JOIN users u ON p.seller_id = u.id",
         "WHERE p.id = #{productId} AND p.deleted = 0"
     })
     @Results({
@@ -134,7 +144,7 @@ public interface ProductManageMapper extends BaseMapper<Product> {
         @Result(column = "removed_at", property = "removedAt", jdbcType = JdbcType.TIMESTAMP),
         @Result(column = "created_at", property = "product.createdAt"),
         @Result(column = "updated_at", property = "product.updatedAt"),
-        @Result(column = "username", property = "userName"),
+        @Result(column = "nickname", property = "userName"),
         @Result(column = "user_phone", property = "userPhone"),
         @Result(column = "view_count", property = "viewCount"),
         @Result(column = "favorite_count", property = "favoriteCount"),
@@ -180,14 +190,14 @@ public interface ProductManageMapper extends BaseMapper<Product> {
      */
     @Select({
         "<script>",
-        "SELECT p.*, u.username",
+        "SELECT p.*, u.nickname",
         "FROM products p",
-        "LEFT JOIN users u ON p.user_id = u.id",
+        "LEFT JOIN users u ON p.seller_id = u.id",
         "WHERE p.deleted = 0 AND p.status = 'REMOVED' AND p.remove_reason IS NOT NULL",
         "<if test='keyword != null and keyword != \"\"'>",
         "  AND (p.title LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR p.remove_reason LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
-        "    OR u.username LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
+        "    OR u.nickname LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
         "</if>",
         "ORDER BY p.removed_at DESC",
         "</script>"
@@ -199,7 +209,7 @@ public interface ProductManageMapper extends BaseMapper<Product> {
      */
     @Select({
         "<script>",
-        "SELECT p.*, u.username,",
+        "SELECT p.*, u.nickname,",
         "  COALESCE(view_stats.view_count, 0) as view_count,",
         "  COALESCE(favorite_stats.favorite_count, 0) as favorite_count,",
         "  COALESCE(inquiry_stats.inquiry_count, 0) as inquiry_count,",
@@ -207,7 +217,7 @@ public interface ProductManageMapper extends BaseMapper<Product> {
         "   COALESCE(favorite_stats.favorite_count, 0) * 3.0 + ",
         "   COALESCE(inquiry_stats.inquiry_count, 0) * 2.0) as popularity_score",
         "FROM products p",
-        "LEFT JOIN users u ON p.user_id = u.id",
+        "LEFT JOIN users u ON p.seller_id = u.id",
         "LEFT JOIN (",
         "  SELECT product_id, COUNT(*) as view_count",
         "  FROM product_views",

@@ -4,10 +4,7 @@
     <div class="page-header">
       <h2>用户管理</h2>
       <div class="header-actions">
-        <el-button type="primary" @click="exportUsers">
-          <el-icon><Download /></el-icon>
-          导出用户
-        </el-button>
+
         <el-button @click="refreshData">
           <el-icon><Refresh /></el-icon>
           刷新
@@ -63,19 +60,14 @@
     <!-- 用户列表 -->
     <div class="users-table">
       <el-table
-        :data="users"
-        v-loading="loading"
-        stripe
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
+          :data="users"
+          v-loading="loading"
+          stripe
+        >
         
         <el-table-column label="用户信息" min-width="200">
           <template #default="{ row }">
             <div class="user-info">
-              <el-avatar :size="40" :src="row.avatar">
-                <el-icon><User /></el-icon>
-              </el-avatar>
               <div class="user-details">
                 <div class="user-name">
                   {{ row.nickname }}
@@ -142,14 +134,7 @@
         </el-table-column>
       </el-table>
       
-      <!-- 批量操作 -->
-      <div class="batch-actions" v-if="selectedUsers.length > 0">
-        <span>已选择 {{ selectedUsers.length }} 个用户</span>
-        <el-button size="small" @click="batchVerify">批量认证</el-button>
-        <el-button size="small" type="warning" @click="batchBan">批量封禁</el-button>
-        <el-button size="small" type="success" @click="batchUnban">批量解封</el-button>
-        <el-button size="small" type="danger" @click="batchDelete">批量删除</el-button>
-      </div>
+
       
       <!-- 分页 -->
       <div class="pagination-container">
@@ -169,18 +154,15 @@
     <el-dialog v-model="userDetailVisible" title="用户详情" width="600px">
       <div class="user-detail" v-if="currentUser">
         <div class="detail-header">
-          <el-avatar :size="80" :src="currentUser.avatar">
-            <el-icon><User /></el-icon>
-          </el-avatar>
-          <div class="user-info">
-            <h3>{{ currentUser.nickname }}</h3>
-            <p>{{ currentUser.phone }}</p>
-            <div class="user-tags">
-              <el-tag :type="getStatusType(currentUser.status)">{{ getStatusText(currentUser.status) }}</el-tag>
-              <el-tag v-if="currentUser.verifyStatus === 2" type="success">已认证</el-tag>
+            <div class="user-info">
+              <h3>{{ currentUser.nickname }}</h3>
+              <p>{{ currentUser.phone }}</p>
+              <div class="user-tags">
+                <el-tag :type="getStatusType(currentUser.status)">{{ getStatusText(currentUser.status) }}</el-tag>
+                <el-tag v-if="currentUser.verifyStatus === 2" type="success">已认证</el-tag>
+              </div>
             </div>
           </div>
-        </div>
         
         <div class="detail-content">
           <el-descriptions :column="2" border>
@@ -198,6 +180,69 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 认证用户对话框 -->
+    <el-dialog v-model="verifyDialogVisible" title="用户身份认证" width="800px">
+      <div class="verify-dialog" v-if="verifyUser" v-loading="verifyLoading">
+        <!-- 用户基本信息 -->
+        <div class="verify-user-info">
+          <div class="user-header">
+            <div class="user-details">
+              <h3>{{ verifyUser.nickname }}</h3>
+              <p>手机号：{{ verifyUser.phone }}</p>
+              <p>学校：{{ getSchoolName(verifyUser.schoolId) }}</p>
+              <p>学号：{{ verifyUser.studentId || '未填写' }}</p>
+              <p>真实姓名：{{ verifyUser.realName || '未填写' }}</p>
+              <p>身份证号：{{ verifyUser.idCard || '未填写' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 认证图片 -->
+        <div class="verify-images">
+          <div class="image-section">
+            <h4>身份证照片</h4>
+            <div class="image-container">
+              <el-image
+                v-if="verifyImages.idCard"
+                :src="verifyImages.idCard.base64Data"
+                :preview-src-list="[verifyImages.idCard.base64Data]"
+                fit="contain"
+                class="verify-image"
+              />
+              <div v-else class="no-image">
+                <el-icon><Picture /></el-icon>
+                <p>暂无身份证照片</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="image-section">
+            <h4>学生证照片</h4>
+            <div class="image-container">
+              <el-image
+                v-if="verifyImages.studentCard"
+                :src="verifyImages.studentCard.base64Data"
+                :preview-src-list="[verifyImages.studentCard.base64Data]"
+                fit="contain"
+                class="verify-image"
+              />
+              <div v-else class="no-image">
+                <el-icon><Picture /></el-icon>
+                <p>暂无学生证照片</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="verify-actions">
+          <el-button @click="verifyDialogVisible = false">取消</el-button>
+          <el-button type="danger" @click="rejectVerify">拒绝认证</el-button>
+          <el-button type="primary" @click="confirmVerify">通过认证</el-button>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -211,17 +256,25 @@ import {
   UserFilled,
   Clock,
   Lock,
-  ArrowDown
+  ArrowDown,
+  Picture
 } from '@element-plus/icons-vue'
 import {
-  getUserList as getUsers,
+  getUserList,
+  getUserDetail,
   getUserStats,
   banUser,
   unbanUser,
   batchBanUsers,
-  batchUnbanUsers
+  batchUnbanUsers,
+  deleteUser,
+  batchDeleteUsers,
+  verifyStudentIdentity,
+  batchVerifyStudentIdentity,
+  exportUsersData
 } from '@/api/admin'
 import { useUserStore } from '@/stores/user'
+import dayjs from 'dayjs'
 
 // 获取用户store
 const userStore = useUserStore()
@@ -259,14 +312,20 @@ const updateUserStatus = async (userId, status) => {
   }
 }
 
-const verifyUser = async (userId) => {
+const verifyUserOld = async (userId) => {
   ElMessage.warning('用户验证功能暂未实现')
   return Promise.resolve()
 }
 
-const deleteUser = async (userId) => {
-  ElMessage.warning('删除用户功能暂未实现')
-  return Promise.resolve()
+const deleteUserApi = async (userId) => {
+  const adminId = userStore.userInfo?.id
+  if (!adminId) {
+    throw new Error('无法获取管理员信息')
+  }
+
+  await deleteUser(userId, {
+    adminId: adminId
+  })
 }
 
 const resetUserPassword = async (userId) => {
@@ -274,21 +333,22 @@ const resetUserPassword = async (userId) => {
   return Promise.resolve()
 }
 
-const exportUsersData = async () => {
-  ElMessage.warning('导出用户数据功能暂未实现')
-  return Promise.resolve()
-}
-import dayjs from 'dayjs'
-
 // 响应式数据
 const loading = ref(false)
 const users = ref([])
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
-const selectedUsers = ref([])
+
 const userDetailVisible = ref(false)
 const currentUser = ref(null)
+const verifyDialogVisible = ref(false)
+const verifyUser = ref(null)
+const verifyImages = ref({
+  idCard: null,
+  studentCard: null
+})
+const verifyLoading = ref(false)
 
 // 统计数据
 const stats = reactive({
@@ -323,7 +383,7 @@ const fetchUsers = async () => {
       size: pageSize.value
     }
     
-    const response = await getUsers(params)
+    const response = await getUserList(params)
     
     // MyBatis Plus Page对象结构：records为数据列表
     users.value = response.data.records || []
@@ -364,10 +424,7 @@ const handleCurrentChange = (page) => {
   fetchUsers()
 }
 
-// 选择变化
-const handleSelectionChange = (selection) => {
-  selectedUsers.value = selection
-}
+
 
 // 查看用户
 const viewUser = (user) => {
@@ -423,12 +480,123 @@ const handleUserAction = async (command, user) => {
 // 认证用户
 const verifyUserAction = async (user) => {
   try {
-    await verifyUser(user.id)
-    user.verifyStatus = 2
-    ElMessage.success('用户认证成功')
+    // 先获取用户详细信息
+    const userDetailResponse = await getUserDetail(user.id)
+    const userDetail = userDetailResponse.data
+    
+    // 将用户详细信息设置为认证用户
+    verifyUser.value = userDetail.user
+    verifyDialogVisible.value = true
+    
+    // 加载认证图片数据
+      loadVerifyImages(userDetail.user)
   } catch (error) {
-    console.error('认证失败:', error)
-    ElMessage.error('认证失败')
+    console.error('获取认证信息失败:', error)
+    ElMessage.error('获取认证信息失败')
+  }
+}
+
+// 加载认证图片数据（从后端返回的数据中获取）
+const loadVerifyImages = (user) => {
+  verifyImages.value = {
+    idCard: user.idCardImgData ? {
+      id: user.idCardImgId,
+      name: `id_card_${user.idCardImgId}`,
+      base64Data: user.idCardImgData
+    } : null,
+    studentCard: user.studentCardImgData ? {
+      id: user.studentCardImgId,
+      name: `student_card_${user.studentCardImgId}`,
+      base64Data: user.studentCardImgData
+    } : null
+  }
+}
+
+// 确认认证
+const confirmVerify = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要通过用户"${verifyUser.value.nickname}"的身份认证吗？`,
+      '确认认证',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+    
+    const adminId = userStore.userInfo?.id
+    if (!adminId) {
+      ElMessage.error('无法获取管理员信息')
+      return
+    }
+    
+    await verifyStudentIdentity(verifyUser.value.id, {
+      adminId: adminId,
+      status: 'APPROVED',
+      reason: '管理员审核通过'
+    })
+    
+    ElMessage.success('认证成功')
+    verifyDialogVisible.value = false
+    
+    // 更新用户状态
+    const userIndex = users.value.findIndex(u => u.id === verifyUser.value.id)
+    if (userIndex !== -1) {
+      users.value[userIndex].verifyStatus = 2
+    }
+    
+    await fetchStats()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('认证失败:', error)
+      ElMessage.error(error.response?.data?.message || '认证失败')
+    }
+  }
+}
+
+// 拒绝认证
+const rejectVerify = async () => {
+  try {
+    const { value: reason } = await ElMessageBox.prompt(
+      '请输入拒绝认证的原因：',
+      '拒绝认证',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /.+/,
+        inputErrorMessage: '请输入拒绝原因'
+      }
+    )
+    
+    const adminId = userStore.userInfo?.id
+    if (!adminId) {
+      ElMessage.error('无法获取管理员信息')
+      return
+    }
+    
+    await verifyStudentIdentity(verifyUser.value.id, {
+      adminId: adminId,
+      status: 'REJECTED',
+      reason: reason
+    })
+    
+    ElMessage.success('已拒绝认证')
+    verifyDialogVisible.value = false
+    
+    // 更新用户状态
+    const userIndex = users.value.findIndex(u => u.id === verifyUser.value.id)
+    if (userIndex !== -1) {
+      users.value[userIndex].verifyStatus = 3
+      users.value[userIndex].verifyReason = reason
+    }
+    
+    await fetchStats()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('拒绝认证失败:', error)
+      ElMessage.error(error.response?.data?.message || '拒绝认证失败')
+    }
   }
 }
 
@@ -468,150 +636,25 @@ const deleteUserAction = async (user) => {
       }
     )
     
-    await deleteUser(user.id)
+    await deleteUserApi(user.id)
     ElMessage.success('删除成功')
     fetchUsers()
     fetchStats()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
-      ElMessage.error('删除失败')
+      ElMessage.error(error.response?.data?.message || '删除失败')
     }
   }
 }
 
-// 批量认证
-const batchVerify = async () => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要认证选中的 ${selectedUsers.value.length} 个用户吗？`,
-      '确认批量认证',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
-    
-    const promises = selectedUsers.value.map(user => verifyUser(user.id))
-    await Promise.all(promises)
-    
-    selectedUsers.value.forEach(user => {
-      user.verifyStatus = 2
-    })
-    
-    ElMessage.success('批量认证成功')
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('批量认证失败:', error)
-      ElMessage.error('批量认证失败')
-    }
-  }
-}
 
-// 批量封禁
-const batchBan = async () => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要封禁选中的 ${selectedUsers.value.length} 个用户吗？`,
-      '确认批量封禁',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    const adminId = userStore.userInfo?.id
-    if (!adminId) {
-      ElMessage.error('无法获取管理员信息')
-      return
-    }
-    
-    // 使用批量封禁API
-     await batchBanUsers({
-       userIds: selectedUsers.value.map(user => user.id),
-       adminId: adminId,
-       reason: '管理员批量操作',
-       banDays: 30  // 默认封禁30天
-     })
-    
-    ElMessage.success('批量封禁成功')
-    selectedUsers.value = []
-    await fetchUsers()
-    await fetchStats()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('批量封禁失败:', error)
-      ElMessage.error(error.response?.data?.message || '批量封禁失败')
-    }
-  }
-}
 
-// 批量解封
-const batchUnban = async () => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要解封选中的 ${selectedUsers.value.length} 个用户吗？`,
-      '确认批量解封',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
-    
-    const adminId = userStore.userInfo?.id
-     if (!adminId) {
-       ElMessage.error('无法获取管理员信息')
-       return
-     }
-     
-     // 使用批量解封API
-    await batchUnbanUsers({
-      userIds: selectedUsers.value.map(user => user.id),
-      adminId: adminId,
-      reason: '管理员批量操作'
-    })
-    
-    ElMessage.success('批量解封成功')
-    selectedUsers.value = []
-    await fetchUsers()
-    await fetchStats()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('批量解封失败:', error)
-      ElMessage.error(error.response?.data?.message || '批量解封失败')
-    }
-  }
-}
 
-// 批量删除
-const batchDelete = async () => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedUsers.value.length} 个用户吗？此操作不可恢复。`,
-      '确认批量删除',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    const promises = selectedUsers.value.map(user => deleteUser(user.id))
-    await Promise.all(promises)
-    
-    ElMessage.success('批量删除成功')
-    fetchUsers()
-    fetchStats()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('批量删除失败:', error)
-      ElMessage.error('批量删除失败')
-    }
-  }
-}
+
+
+
+
 
 // 导出用户
 const exportUsers = async () => {
@@ -642,6 +685,37 @@ const refreshData = () => {
 // 获取学校名称
 const getSchoolName = (schoolId) => {
   return schoolMap[schoolId] || '未知学校'
+}
+
+// 获取头像URL
+const getAvatarUrl = (user) => {
+  if (!user) {
+    console.log('getAvatarUrl: user is null or undefined')
+    return ''
+  }
+  
+  console.log('getAvatarUrl: user data:', {
+    id: user.id,
+    nickname: user.nickname,
+    avatar: user.avatar,
+    avatarData: user.avatarData ? `${user.avatarData.substring(0, 50)}...` : null,
+    avatarDataLength: user.avatarData ? user.avatarData.length : 0
+  })
+  
+  // 优先使用avatarData字段（base64格式）
+  if (user.avatarData) {
+    console.log('getAvatarUrl: using avatarData (base64)')
+    return user.avatarData
+  }
+  
+  // 如果avatar字段不是数字ID，可能是完整URL或相对路径
+  if (user.avatar && !/^\d+$/.test(user.avatar)) {
+    console.log('getAvatarUrl: using direct URL:', user.avatar)
+    return user.avatar
+  }
+  
+  console.log('getAvatarUrl: no valid avatar data found')
+  return ''
 }
 
 // 获取状态类型
@@ -892,6 +966,93 @@ onMounted(async () => {
           width: 100%;
         }
       }
+    }
+  }
+  
+  // 认证弹窗样式
+  .verify-dialog {
+    .verify-user-info {
+      margin-bottom: 24px;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: var(--border-radius-medium);
+      
+      .user-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        
+        .user-details {
+          flex: 1;
+          
+          h3 {
+            margin: 0 0 8px 0;
+            color: var(--text-primary);
+            font-size: 18px;
+          }
+          
+          p {
+            margin: 4px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+          }
+        }
+      }
+    }
+    
+    .verify-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+      
+      .image-section {
+        h4 {
+          margin: 0 0 12px 0;
+          color: var(--text-primary);
+          font-size: 16px;
+          font-weight: 600;
+        }
+        
+        .image-container {
+          border: 2px dashed var(--border-color);
+          border-radius: var(--border-radius-medium);
+          padding: 16px;
+          text-align: center;
+          min-height: 200px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          .verify-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--border-radius-small);
+          }
+          
+          .no-image {
+            color: var(--text-placeholder);
+            
+            .el-icon {
+              font-size: 48px;
+              margin-bottom: 8px;
+            }
+            
+            p {
+              margin: 0;
+              font-size: 14px;
+            }
+          }
+        }
+      }
+    }
+    
+    .verify-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
     }
   }
 }

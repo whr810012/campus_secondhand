@@ -9,37 +9,13 @@
     <div class="filter-bar">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="全部" name="all" />
-        <el-tab-pane label="待付款" name="pending_payment" />
-        <el-tab-pane label="待发货" name="pending_delivery" />
-        <el-tab-pane label="待收货" name="pending_receipt" />
+        <el-tab-pane label="待付款" name="pending" />
+        <el-tab-pane label="已付款" name="paid" />
         <el-tab-pane label="已完成" name="completed" />
         <el-tab-pane label="已取消" name="cancelled" />
       </el-tabs>
       
-      <div class="filter-actions">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索订单"
-          style="width: 200px"
-          clearable
-          @change="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          format="YYYY-MM-DD"
-          value-format="YYYY-MM-DD"
-          @change="handleDateChange"
-        />
-      </div>
+
     </div>
 
     <!-- 订单列表 -->
@@ -47,8 +23,8 @@
       <div class="order-card" v-for="order in orders" :key="order.id">
         <div class="order-header">
           <div class="order-info">
-            <span class="order-number">订单号：{{ order.order_number }}</span>
-            <span class="order-time">{{ formatTime(order.created_at) }}</span>
+            <span class="order-number">订单号：{{ order.orderNo }}</span>
+            <span class="order-time">{{ formatTime(order.createdAt) }}</span>
           </div>
           <div class="order-status" :class="getStatusClass(order.status)">
             {{ getStatusText(order.status) }}
@@ -56,31 +32,40 @@
         </div>
         
         <div class="order-content">
-          <div class="product-info" @click="viewProduct(order.product)">
-            <img :src="order.product.images[0] || '/placeholder.jpg'" :alt="order.product.title" />
+          <div class="product-info" @click="viewProduct(order.product)" v-if="order.product">
             <div class="product-details">
               <h4 class="product-title">{{ order.product.title }}</h4>
               <p class="product-desc">{{ order.product.description }}</p>
-              <div class="product-price">¥{{ order.product.price }}</div>
+              <div class="product-meta">
+                <span class="product-price">¥{{ order.product.price }}</span>
+                <span class="product-condition">{{ getConditionText(order.product.condition) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="product-placeholder" v-else>
+            <div class="product-details">
+              <h4 class="product-title">商品信息不可用</h4>
+              <p class="product-desc">商品ID: {{ order.productId }}</p>
+              <div class="product-price">¥{{ order.amount }}</div>
             </div>
           </div>
           
           <div class="order-details">
             <div class="detail-item">
-              <span class="label">数量：</span>
-              <span class="value">{{ order.quantity }}</span>
+              <span class="label">订单金额：</span>
+              <span class="value price">¥{{ order.amount }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">总价：</span>
-              <span class="value price">¥{{ order.total_amount }}</span>
+              <span class="label">支付方式：</span>
+              <span class="value">{{ getPaymentMethodText(order.paymentMethod) }}</span>
             </div>
-            <div class="detail-item" v-if="order.delivery_address">
-              <span class="label">收货地址：</span>
-              <span class="value">{{ order.delivery_address }}</span>
+            <div class="detail-item">
+              <span class="label">交易方式：</span>
+              <span class="value">{{ getTradeTypeText(order.tradeType) }}</span>
             </div>
-            <div class="detail-item" v-if="order.contact_info">
-              <span class="label">联系方式：</span>
-              <span class="value">{{ order.contact_info }}</span>
+            <div class="detail-item" v-if="order.tradeLocation">
+              <span class="label">交易地点：</span>
+              <span class="value">{{ order.tradeLocation }}</span>
             </div>
             <div class="detail-item" v-if="order.remark">
               <span class="label">备注：</span>
@@ -91,7 +76,7 @@
         
         <div class="order-actions">
           <el-button 
-            v-if="order.status === 'pending_payment'" 
+            v-if="order.status === 'pending'" 
             type="primary" 
             @click="payOrder(order)"
           >
@@ -99,7 +84,7 @@
           </el-button>
           
           <el-button 
-            v-if="order.status === 'pending_receipt'" 
+            v-if="order.status === 'paid'" 
             type="success" 
             @click="confirmReceipt(order)"
           >
@@ -107,14 +92,14 @@
           </el-button>
           
           <el-button 
-            v-if="['pending_payment', 'pending_delivery'].includes(order.status)" 
+            v-if="['pending', 'paid'].includes(order.status)" 
             @click="cancelOrder(order)"
           >
             取消订单
           </el-button>
           
           <el-button 
-            v-if="order.status === 'completed' && !order.is_reviewed" 
+            v-if="order.status === 'completed' && !order.buyerRated" 
             @click="reviewOrder(order)"
           >
             评价
@@ -191,7 +176,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import { getUserOrders, payOrder as payOrderApi, cancelOrder as cancelOrderApi, confirmReceipt as confirmReceiptApi, reviewOrder as reviewOrderApi } from '@/api/order'
 import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
@@ -206,8 +191,6 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const activeTab = ref('all')
-const searchKeyword = ref('')
-const dateRange = ref([])
 
 // 评价对话框
 const reviewDialogVisible = ref(false)
@@ -225,16 +208,18 @@ const fetchOrders = async () => {
     const params = {
       page: currentPage.value,
       size: pageSize.value,
-      status: activeTab.value === 'all' ? '' : activeTab.value,
-      keyword: searchKeyword.value,
-      startDate: dateRange.value?.[0] || '',
-      endDate: dateRange.value?.[1] || ''
+      status: activeTab.value === 'all' ? '' : activeTab.value
     }
     
     const response = await getUserOrders(params)
     // MyBatis Plus Page对象结构：records为数据列表，total为总数
-    orders.value = response.data.records || []
-    total.value = response.data.total || 0
+    // 根据接口返回的实际数据结构进行处理
+    const responseData = response.data
+    orders.value = responseData.records || []
+    total.value = responseData.total || 0
+    
+    console.log('订单数据:', orders.value)
+    console.log('总数:', total.value)
   } catch (error) {
     console.error('获取订单列表失败:', error)
     ElMessage.error('获取订单列表失败')
@@ -250,17 +235,7 @@ const handleTabChange = (tab) => {
   fetchOrders()
 }
 
-// 搜索
-const handleSearch = () => {
-  currentPage.value = 1
-  fetchOrders()
-}
 
-// 日期筛选
-const handleDateChange = () => {
-  currentPage.value = 1
-  fetchOrders()
-}
 
 // 分页
 const handleSizeChange = (size) => {
@@ -288,7 +263,7 @@ const viewOrderDetail = (order) => {
 const payOrder = async (order) => {
   try {
     await ElMessageBox.confirm(
-      `确定要支付订单"${order.order_number}"吗？`,
+      `确定要支付订单"${order.orderNo}"吗？`,
       '确认支付',
       {
         confirmButtonText: '确定支付',
@@ -297,7 +272,7 @@ const payOrder = async (order) => {
       }
     )
     
-    await payOrderApi(order.id)
+    await payOrderApi(order.id, {})
     ElMessage.success('支付成功')
     fetchOrders()
   } catch (error) {
@@ -312,7 +287,7 @@ const payOrder = async (order) => {
 const cancelOrder = async (order) => {
   try {
     await ElMessageBox.confirm(
-      `确定要取消订单"${order.order_number}"吗？`,
+      `确定要取消订单"${order.orderNo}"吗？`,
       '确认取消',
       {
         confirmButtonText: '确定',
@@ -335,8 +310,13 @@ const cancelOrder = async (order) => {
 // 确认收货
 const confirmReceipt = async (order) => {
   try {
+    if (!userStore.userInfo?.id) {
+      ElMessage.error('用户信息获取失败，请重新登录')
+      return
+    }
+    
     await ElMessageBox.confirm(
-      `确定已收到商品"${order.product.title}"吗？`,
+      `确定已收到商品"${order.product?.title || '该商品'}"吗？`,
       '确认收货',
       {
         confirmButtonText: '确认收货',
@@ -345,7 +325,7 @@ const confirmReceipt = async (order) => {
       }
     )
     
-    await confirmReceiptApi(order.id)
+    await confirmReceiptApi(order.id, userStore.userInfo.id)
     ElMessage.success('确认收货成功')
     fetchOrders()
   } catch (error) {
@@ -394,12 +374,45 @@ const contactSeller = (order) => {
   ElMessage.info('联系卖家功能开发中')
 }
 
+
+
+// 获取商品状态文本
+const getConditionText = (condition) => {
+  const conditionMap = {
+    1: '全新',
+    2: '几乎全新',
+    3: '轻微使用痕迹',
+    4: '明显使用痕迹',
+    5: '重度使用'
+  }
+  return conditionMap[condition] || '未知'
+}
+
+// 获取支付方式文本
+const getPaymentMethodText = (method) => {
+  const methodMap = {
+    'online': '在线支付',
+    'offline': '线下支付',
+    'cash': '现金支付'
+  }
+  return methodMap[method] || '未知'
+}
+
+// 获取交易方式文本
+const getTradeTypeText = (type) => {
+  const typeMap = {
+    1: '面交',
+    2: '邮寄',
+    3: '自提'
+  }
+  return typeMap[type] || '未知'
+}
+
 // 获取状态样式类
 const getStatusClass = (status) => {
   const statusMap = {
-    pending_payment: 'status-pending-payment',
-    pending_delivery: 'status-pending-delivery',
-    pending_receipt: 'status-pending-receipt',
+    pending: 'status-pending',
+    paid: 'status-paid',
     completed: 'status-completed',
     cancelled: 'status-cancelled'
   }
@@ -409,9 +422,8 @@ const getStatusClass = (status) => {
 // 获取状态文本
 const getStatusText = (status) => {
   const statusMap = {
-    pending_payment: '待付款',
-    pending_delivery: '待发货',
-    pending_receipt: '待收货',
+    pending: '待付款',
+    paid: '已付款',
     completed: '已完成',
     cancelled: '已取消'
   }
@@ -453,11 +465,7 @@ onMounted(() => {
       margin-bottom: 16px;
     }
     
-    .filter-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
+
   }
   
   .orders-container {
@@ -503,19 +511,14 @@ onMounted(() => {
           font-size: var(--font-size-small);
           font-weight: var(--font-weight-primary);
           
-          &.status-pending-payment {
+          &.status-pending {
             background: #fff7e6;
             color: var(--warning-color);
           }
           
-          &.status-pending-delivery {
+          &.status-paid {
             background: #e6f7ff;
             color: var(--primary-color);
-          }
-          
-          &.status-pending-receipt {
-            background: #f6ffed;
-            color: var(--success-color);
           }
           
           &.status-completed {
@@ -535,7 +538,6 @@ onMounted(() => {
         
         .product-info {
           display: flex;
-          gap: 16px;
           margin-bottom: 16px;
           cursor: pointer;
           transition: var(--transition-all);
@@ -544,12 +546,7 @@ onMounted(() => {
             background: var(--bg-secondary);
           }
           
-          img {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: var(--border-radius-base);
-          }
+
           
           .product-details {
             flex: 1;
@@ -567,6 +564,50 @@ onMounted(() => {
               font-size: var(--font-size-small);
               margin: 0 0 8px 0;
               @include multi-line-ellipsis(2);
+            }
+            
+            .product-meta {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              
+              .product-price {
+                font-size: var(--font-size-large);
+                font-weight: var(--font-weight-primary);
+                color: var(--danger-color);
+              }
+              
+              .product-condition {
+                font-size: var(--font-size-small);
+                color: var(--text-secondary);
+                background: var(--bg-secondary);
+                padding: 2px 8px;
+                border-radius: var(--border-radius-small);
+              }
+            }
+          }
+        }
+        
+        .product-placeholder {
+          display: flex;
+          margin-bottom: 16px;
+          
+
+          
+          .product-details {
+            flex: 1;
+            
+            .product-title {
+              font-size: var(--font-size-medium);
+              font-weight: var(--font-weight-primary);
+              color: var(--text-primary);
+              margin: 0 0 8px 0;
+            }
+            
+            .product-desc {
+              color: var(--text-secondary);
+              font-size: var(--font-size-small);
+              margin: 0 0 8px 0;
             }
             
             .product-price {
@@ -625,18 +666,7 @@ onMounted(() => {
   .my-orders {
     padding: 16px;
     
-    .filter-bar {
-      .filter-actions {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-        
-        .el-input,
-        .el-date-picker {
-          width: 100% !important;
-        }
-      }
-    }
+
     
     .orders-container {
       .order-card {
@@ -654,14 +684,7 @@ onMounted(() => {
           }
         }
         
-        .order-content {
-          .product-info {
-            img {
-              width: 60px;
-              height: 60px;
-            }
-          }
-        }
+
         
         .order-actions {
           justify-content: center;
@@ -685,11 +708,13 @@ onMounted(() => {
         .order-content {
           padding: 16px;
           
-          .product-info {
+          .product-info,
+          .product-placeholder {
             flex-direction: column;
             text-align: center;
             
-            img {
+            img,
+            .placeholder-image {
               align-self: center;
             }
           }

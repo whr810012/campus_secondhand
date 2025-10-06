@@ -102,37 +102,16 @@ public class UploadController {
     }
 
     /**
-     * 获取图片（base64格式）
+     * 获取图片（base64格式）- 已禁用
+     * @deprecated 此接口已被禁用，请使用 /api/admin/users/{id} 接口获取用户信息和图片数据
      */
+    @Deprecated
     @GetMapping("/image/{id}")
-    public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
-        try {
-            Img img = imgService.getImgById(id);
-            if (img == null) {
-                return ResponseEntity.notFound().build();
-            }
-
-            // 将base64数据转换为字节数组
-            byte[] imageBytes = Base64.getDecoder().decode(img.getBase64Data());
-            
-            // 根据文件名获取MIME类型
-            String contentType = "image/jpeg"; // 默认JPEG
-            String fileName = img.getName().toLowerCase();
-            if (fileName.endsWith(".png")) {
-                contentType = "image/png";
-            } else if (fileName.endsWith(".gif")) {
-                contentType = "image/gif";
-            } else if (fileName.endsWith(".webp")) {
-                contentType = "image/webp";
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .body(imageBytes);
-        } catch (Exception e) {
-            log.error("获取图片失败", e);
-            return ResponseEntity.status(500).build();
-        }
+    public ResponseEntity<String> getImage(@PathVariable Long id) {
+        log.warn("已禁用的接口被调用: /api/upload/image/{}, 请使用 /api/admin/users/{{id}} 接口", id);
+        return ResponseEntity.status(410)
+                .contentType(MediaType.TEXT_PLAIN)
+                .body("此接口已被禁用，请使用 /api/admin/users/{id} 接口获取用户信息和图片数据");
     }
 
     /**

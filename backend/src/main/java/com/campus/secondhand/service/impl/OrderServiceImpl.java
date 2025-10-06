@@ -33,19 +33,24 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public Order createOrder(Long productId, Long buyerId, Integer tradeType, 
+    public Order createOrder(Long productId, Long buyerId, Long sellerId, Double amount, Integer tradeType, 
                            String tradeLocation, String deliveryAddress, 
-                           String receiverName, String receiverPhone, String remark) {
+                           String receiverName, String receiverPhone, String paymentMethod, String remark) {
         // 检查商品是否存在且可售
         Product product = productMapper.selectById(productId);
         if (product == null || product.getDeleted() == 1) {
             throw new RuntimeException("商品不存在");
         }
-        if (!"available".equals(product.getStatus())) {
+        if (!"available".equals(product.getStatus()) && !"1".equals(product.getStatus())) {
             throw new RuntimeException("商品不可售");
         }
         if (product.getSellerId().equals(buyerId)) {
             throw new RuntimeException("不能购买自己的商品");
+        }
+        
+        // 验证卖家ID是否匹配
+        if (!product.getSellerId().equals(sellerId)) {
+            throw new RuntimeException("卖家信息不匹配");
         }
 
         // 创建订单
@@ -53,14 +58,15 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderNo(generateOrderNo());
         order.setProductId(productId);
         order.setBuyerId(buyerId);
-        order.setSellerId(product.getSellerId());
-        order.setAmount(product.getPrice());
+        order.setSellerId(sellerId);
+        order.setAmount(amount != null ? BigDecimal.valueOf(amount) : product.getPrice());
         order.setStatus("pending");
         order.setTradeType(tradeType);
         order.setTradeLocation(tradeLocation);
         order.setDeliveryAddress(deliveryAddress);
         order.setReceiverName(receiverName);
         order.setReceiverPhone(receiverPhone);
+        order.setPaymentMethod(paymentMethod);
         order.setRemark(remark);
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
@@ -78,34 +84,50 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order getOrderById(Long id) {
-        return orderMapper.selectById(id);
+        Order order = orderMapper.selectById(id);
+        if (order != null && order.getProductId() != null) {
+            Product product = productMapper.selectById(order.getProductId());
+            order.setProduct(product);
+        }
+        return order;
     }
 
     @Override
-    public Page<Order> getUserOrders(Long userId, int page, int size, String status, String type) {
+    public Page<Order> getUserOrders(Long userId, int page, int size, String status, String keyword, String startDate, String endDate) {
         Page<Order> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
         
-        // 根据类型查询
-        if ("buy".equals(type)) {
-            queryWrapper.eq(Order::getBuyerId, userId);
-        } else if ("sell".equals(type)) {
-            queryWrapper.eq(Order::getSellerId, userId);
-        } else {
-            queryWrapper.and(wrapper -> wrapper.eq(Order::getBuyerId, userId)
-                    .or().eq(Order::getSellerId, userId));
-        }
+        // 用户ID筛选
+        queryWrapper.eq(Order::getBuyerId, userId);
         
         // 状态筛选
         if (StringUtils.hasText(status)) {
             queryWrapper.eq(Order::getStatus, status);
         }
         
-        // 只查询未删除的订单
-        queryWrapper.eq(Order::getDeleted, 0);
+        // 关键词搜索（订单号）
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.like(Order::getOrderNo, keyword);
+        }
+        
+        // 日期范围筛选
+        if (StringUtils.hasText(startDate) && StringUtils.hasText(endDate)) {
+            queryWrapper.between(Order::getCreatedAt, startDate, endDate);
+        }
+        
         queryWrapper.orderByDesc(Order::getCreatedAt);
         
-        return orderMapper.selectPage(pageParam, queryWrapper);
+        Page<Order> orderPage = orderMapper.selectPage(pageParam, queryWrapper);
+        
+        // 为每个订单关联商品信息
+        for (Order order : orderPage.getRecords()) {
+            if (order.getProductId() != null) {
+                Product product = productMapper.selectById(order.getProductId());
+                order.setProduct(product);
+            }
+        }
+        
+        return orderPage;
     }
 
     @Override
@@ -142,7 +164,7 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getBuyerId().equals(userId)) {
             throw new RuntimeException("无权限操作此订单");
         }
-        if (!"delivered".equals(order.getStatus()) && !"shipped".equals(order.getStatus())) {
+        if (!"delivered".equals(order.getStatus()) && !"shipped".equals(order.getStatus()) && !"paid".equals(order.getStatus())) {
             throw new RuntimeException("订单状态不正确");
         }
 
@@ -279,7 +301,17 @@ public class OrderServiceImpl implements OrderService {
         queryWrapper.eq(Order::getDeleted, 0);
         queryWrapper.orderByDesc(Order::getCreatedAt);
         
-        return orderMapper.selectPage(pageParam, queryWrapper);
+        Page<Order> orderPage = orderMapper.selectPage(pageParam, queryWrapper);
+        
+        // 为每个订单关联商品信息
+        for (Order order : orderPage.getRecords()) {
+            if (order.getProductId() != null) {
+                Product product = productMapper.selectById(order.getProductId());
+                order.setProduct(product);
+            }
+        }
+        
+        return orderPage;
     }
 
     @Override

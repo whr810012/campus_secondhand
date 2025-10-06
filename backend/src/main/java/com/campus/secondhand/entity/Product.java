@@ -66,6 +66,36 @@ public class Product {
      */
     @TableField(exist = false)
     private User seller;
+    
+    /**
+     * 卖家昵称
+     */
+    @TableField(exist = false)
+    private String sellerNickname;
+    
+    /**
+     * 卖家手机号
+     */
+    @TableField(exist = false)
+    private String sellerPhone;
+    
+    /**
+     * 卖家学号
+     */
+    @TableField(exist = false)
+    private String sellerStudentId;
+    
+    /**
+     * 审核人姓名
+     */
+    @TableField(exist = false)
+    private String auditorName;
+    
+    /**
+     * 咨询次数
+     */
+    @TableField(exist = false)
+    private Integer inquiryCount;
 
     /**
      * 商品图片，JSON数组格式

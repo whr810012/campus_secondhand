@@ -50,6 +50,7 @@ public interface MessageMapper extends BaseMapper<Message> {
         "  END as userId,",
         "  u.nickname,",
         "  u.avatar,",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as avatar_data,",
         "  m.product_id as productId,",
         "  p.title as productTitle,",
         "  (",

@@ -43,6 +43,9 @@ public class ProductServiceImpl implements ProductService {
         // 只查询未删除的商品
         queryWrapper.eq(Product::getDeleted, 0);
         
+        // 只查询可售状态的商品（排除已预定、已售出、已下架的商品）
+        queryWrapper.eq(Product::getStatus, "available");
+        
         // 关键词搜索
         if (StringUtils.hasText(keyword)) {
             queryWrapper.and(wrapper -> wrapper
@@ -513,7 +516,7 @@ public class ProductServiceImpl implements ProductService {
             
             // 只查询未删除且在售的商品
             queryWrapper.eq(Product::getDeleted, 0)
-                        .eq(Product::getStatus, "ACTIVE");
+                        .eq(Product::getStatus, "available");
             
             // 优先推荐同分类的商品
             if (currentProduct.getCategoryId() != null) {
@@ -532,7 +535,7 @@ public class ProductServiceImpl implements ProductService {
                 
                 fallbackWrapper.ne(Product::getId, productId)
                               .eq(Product::getDeleted, 0)
-                              .eq(Product::getStatus, "ACTIVE");
+                              .eq(Product::getStatus, "available");
                 
                 // 排除已经获取的商品
                 if (!relatedProducts.getRecords().isEmpty()) {
@@ -562,6 +565,39 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             log.error("获取相关商品推荐异常: productId={}, error={}", productId, e.getMessage(), e);
             return new Page<>(1, size);
+        }
+    }
+
+    @Override
+    @Transactional
+    public boolean updateProductStatus(Long productId, String status) {
+        try {
+            log.info("开始更新商品状态: productId={}, status={}", productId, status);
+            
+            // 检查商品是否存在
+            Product product = productMapper.selectById(productId);
+            if (product == null) {
+                log.warn("商品不存在: productId={}", productId);
+                return false;
+            }
+            
+            // 更新商品状态
+            product.setStatus(status);
+            product.setUpdatedAt(LocalDateTime.now());
+            
+            int result = productMapper.updateById(product);
+            
+            if (result > 0) {
+                log.info("商品状态更新成功: productId={}, status={}", productId, status);
+                return true;
+            } else {
+                log.warn("商品状态更新失败: productId={}, status={}", productId, status);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            log.error("更新商品状态异常: productId={}, status={}, error={}", productId, status, e.getMessage(), e);
+            return false;
         }
     }
 }

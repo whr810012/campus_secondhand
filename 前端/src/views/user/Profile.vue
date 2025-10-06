@@ -94,16 +94,7 @@
             </el-button>
           </div>
           
-          <div class="product-filters">
-            <el-radio-group v-model="productFilter" @change="fetchMyProducts">
-              <el-radio-button label="all">全部</el-radio-button>
-              <el-radio-button label="pending">待审核</el-radio-button>
-              <el-radio-button label="available">在售</el-radio-button>
-              <el-radio-button label="reserved">已预定</el-radio-button>
-              <el-radio-button label="sold">已售出</el-radio-button>
-              <el-radio-button label="unavailable">已下架</el-radio-button>
-            </el-radio-group>
-          </div>
+
           
           <div v-loading="loading.products" class="products-list">
             <div
@@ -165,18 +156,7 @@
             <h3>我的订单</h3>
           </div>
           
-          <div class="order-filters">
-            <el-radio-group v-model="orderFilter" @change="fetchMyOrders">
-              <el-radio-button label="all">全部</el-radio-button>
-              <el-radio-button label="pending">待付款</el-radio-button>
-              <el-radio-button label="paid">已付款</el-radio-button>
-              <el-radio-button label="shipped">已发货</el-radio-button>
-              <el-radio-button label="delivered">已送达</el-radio-button>
-              <el-radio-button label="completed">已完成</el-radio-button>
-              <el-radio-button label="cancelled">已取消</el-radio-button>
-              <el-radio-button label="refunded">已退款</el-radio-button>
-            </el-radio-group>
-          </div>
+
           
           <div v-loading="loading.orders" class="orders-list">
             <div
@@ -193,7 +173,6 @@
               
               <div class="order-content">
                 <div class="product-info">
-                  <img :src="getProductImage(order.product?.images)" :alt="order.product?.title" />
                   <div class="product-details">
                     <h4>{{ order.product?.title }}</h4>
                     <p>{{ order.product?.description }}</p>
@@ -452,8 +431,7 @@ const showPhoneDialog = ref(false)
 const previewAvatar = ref('')
 const passwordFormRef = ref()
 
-const productFilter = ref('all')
-const orderFilter = ref('all')
+
 
 const loading = reactive({
   products: false,
@@ -558,17 +536,7 @@ const fetchUserStats = async () => {
 const fetchMyProducts = async () => {
   loading.products = true
   try {
-    let params = {}
-    if (productFilter.value !== 'all') {
-      if (productFilter.value === 'pending') {
-        // 待审核状态使用audit_status参数，数据库中0表示待审核
-        params.audit_status = 0
-      } else {
-        // 其他状态使用status参数
-        params.status = productFilter.value
-      }
-    }
-    const response = await getMyProducts(params)
+    const response = await getMyProducts({})
     myProducts.value = response.data.records || []
   } catch (error) {
     console.error('获取我的商品失败:', error)
@@ -581,8 +549,7 @@ const fetchMyProducts = async () => {
 const fetchMyOrders = async () => {
   loading.orders = true
   try {
-    const params = orderFilter.value === 'all' ? {} : { status: orderFilter.value }
-    const response = await getMyOrders(params)
+    const response = await getMyOrders({})
     myOrders.value = response.data.records || []
   } catch (error) {
     console.error('获取我的订单失败:', error)
@@ -1051,10 +1018,7 @@ watch(activeTab, (newTab) => {
         }
       }
       
-      .product-filters,
-      .order-filters {
-        margin-bottom: 20px;
-      }
+
       
       .products-list {
         .product-item {

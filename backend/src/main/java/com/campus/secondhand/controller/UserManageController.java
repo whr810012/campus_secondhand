@@ -211,6 +211,38 @@ public class UserManageController {
         }
     }
 
+    /**
+     * 删除用户
+     */
+    @DeleteMapping("/{userId}")
+    public Result<Void> deleteUser(
+            @PathVariable Long userId,
+            @RequestBody DeleteUserRequest request) {
+        try {
+            boolean success = userManageService.deleteUser(userId, request.getAdminId());
+            if (success) {
+                return Result.success();
+            } else {
+                return Result.error("删除用户失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除用户
+     */
+    @PostMapping("/batch-delete")
+    public Result<Integer> batchDeleteUsers(@RequestBody BatchDeleteUsersRequest request) {
+        try {
+            int successCount = userManageService.batchDeleteUsers(request.getUserIds(), request.getAdminId());
+            return Result.success(successCount);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     // 内部类定义请求参数
     public static class BanUserRequest {
         private Long adminId;
@@ -285,6 +317,23 @@ public class UserManageController {
     }
 
     public static class BatchUnbanUsersRequest {
+        private List<Long> userIds;
+        private Long adminId;
+
+        public List<Long> getUserIds() { return userIds; }
+        public void setUserIds(List<Long> userIds) { this.userIds = userIds; }
+        public Long getAdminId() { return adminId; }
+        public void setAdminId(Long adminId) { this.adminId = adminId; }
+    }
+
+    public static class DeleteUserRequest {
+        private Long adminId;
+
+        public Long getAdminId() { return adminId; }
+        public void setAdminId(Long adminId) { this.adminId = adminId; }
+    }
+
+    public static class BatchDeleteUsersRequest {
         private List<Long> userIds;
         private Long adminId;
 

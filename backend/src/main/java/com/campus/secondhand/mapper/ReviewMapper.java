@@ -20,7 +20,8 @@ public interface ReviewMapper extends BaseMapper<Review> {
      * 分页查询商品评价（包含评价者信息）
      */
     @Select({
-        "SELECT r.*, u.nickname as reviewerNickname, u.avatar as reviewerAvatar",
+        "SELECT r.*, u.nickname as reviewerNickname, u.avatar as reviewerAvatar,",
+        "       (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as reviewerAvatarData",
         "FROM reviews r",
         "LEFT JOIN users u ON r.reviewer_id = u.id",
         "WHERE r.deleted = 0 AND r.product_id = #{productId}",
@@ -33,6 +34,7 @@ public interface ReviewMapper extends BaseMapper<Review> {
      */
     @Select({
         "SELECT r.*, u.nickname as reviewerNickname, u.avatar as reviewerAvatar,",
+        "       (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as reviewerAvatarData,",
         "       p.title as productTitle, p.images as productImages",
         "FROM reviews r",
         "LEFT JOIN users u ON r.reviewer_id = u.id",
@@ -47,6 +49,7 @@ public interface ReviewMapper extends BaseMapper<Review> {
      */
     @Select({
         "SELECT r.*, u.nickname as reviewedNickname, u.avatar as reviewedAvatar,",
+        "       (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as reviewedAvatarData,",
         "       p.title as productTitle, p.images as productImages",
         "FROM reviews r",
         "LEFT JOIN users u ON r.reviewed_id = u.id",

@@ -21,6 +21,7 @@ const MyFavorites = () => import('@/views/user/MyFavorites.vue')
 const Messages = () => import('@/views/user/Messages.vue')
 const Chat = () => import('@/views/user/Chat.vue')
 const OrderDetail = () => import('@/views/user/OrderDetail.vue')
+const OrderConfirm = () => import('@/views/user/OrderConfirm.vue')
 
 // 认证页面
 const Login = () => import('@/views/auth/Login.vue')
@@ -121,6 +122,12 @@ const routes = [
         name: 'Chat',
         component: Chat,
         meta: { title: '聊天', requiresAuth: true }
+      },
+      {
+        path: 'order/confirm',
+        name: 'OrderConfirm',
+        component: OrderConfirm,
+        meta: { title: '确认订单', requiresAuth: true }
       },
       {
         path: 'order/:id',

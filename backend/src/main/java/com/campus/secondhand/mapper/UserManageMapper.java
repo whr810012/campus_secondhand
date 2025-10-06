@@ -25,6 +25,7 @@ public interface UserManageMapper extends BaseMapper<User> {
     @Select({
         "<script>",
         "SELECT u.*, ",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as avatar_data,",
         "  CASE WHEN u.ban_end_time &gt; NOW() THEN 'BANNED' ELSE u.status END as current_status",
         "FROM users u",
         "WHERE u.deleted = 0",
@@ -59,6 +60,7 @@ public interface UserManageMapper extends BaseMapper<User> {
     @Select({
         "<script>",
         "SELECT u.*, ",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as avatar_data,",
         "  CASE WHEN u.ban_end_time &gt; NOW() THEN 'BANNED' ELSE u.status END as current_status",
         "FROM users u",
         "WHERE u.deleted = 0",
@@ -93,9 +95,10 @@ public interface UserManageMapper extends BaseMapper<User> {
      */
     @Update({
         "UPDATE users SET ",
+        "  status = 1,",
         "  ban_reason = #{reason},",
         "  ban_end_time = #{banEndTime, jdbcType=TIMESTAMP},",
-        "  updated_at = NOW()",
+        "  updated_at = NOW() ",
         "WHERE id = #{userId} AND deleted = 0"
     })
     int banUser(@Param("userId") Long userId, 
@@ -107,9 +110,10 @@ public interface UserManageMapper extends BaseMapper<User> {
      */
     @Update({
         "UPDATE users SET ",
+        "  status = 0,",
         "  ban_reason = NULL,",
         "  ban_end_time = NULL,",
-        "  updated_at = NOW()",
+        "  updated_at = NOW() ",
         "WHERE id = #{userId} AND deleted = 0"
     })
     int unbanUser(@Param("userId") Long userId);
@@ -139,25 +143,26 @@ public interface UserManageMapper extends BaseMapper<User> {
         "UPDATE users SET ",
         "  verify_status = #{status},",
         "  verify_reason = #{reason, jdbcType=VARCHAR},",
-        "  verified_at = #{verifiedAt, jdbcType=TIMESTAMP},",
         "  updated_at = NOW()",
         "WHERE id = #{userId} AND deleted = 0"
     })
     int verifyStudentIdentity(@Param("userId") Long userId, 
                              @Param("status") String status, 
-                             @Param("reason") String reason,
-                             @Param("verifiedAt") LocalDateTime verifiedAt);
+                             @Param("reason") String reason);
 
     /**
      * 获取用户详细信息
      */
     @Select({
         "SELECT u.*,",
-        "  (SELECT COUNT(*) FROM products p WHERE p.user_id = u.id AND p.deleted = 0) as product_count,",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as avatar_data,",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.id_card_img_id AND i.status = 1) as id_card_img_data,",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.student_card_img_id AND i.status = 1) as student_card_img_data,",
+        "  (SELECT COUNT(*) FROM products p WHERE p.seller_id = u.id AND p.deleted = 0) as product_count,",
         "  (SELECT COUNT(*) FROM orders o WHERE (o.buyer_id = u.id OR o.seller_id = u.id) AND o.deleted = 0) as order_count,",
-        "  (SELECT COUNT(*) FROM reviews r WHERE (r.reviewer_id = u.id OR r.reviewee_id = u.id) AND r.deleted = 0) as review_count,",
-        "  (SELECT AVG(r.rating) FROM reviews r WHERE r.reviewee_id = u.id AND r.deleted = 0) as avg_rating,",
-        "  (SELECT MAX(l.created_at) FROM login_logs l WHERE l.user_id = u.id) as last_login_time",
+        "  (SELECT COUNT(*) FROM reviews r WHERE (r.reviewer_id = u.id OR r.reviewee_id = u.id) AND r.status = 1) as review_count,",
+        "  (SELECT AVG(r.rating) FROM reviews r WHERE r.reviewee_id = u.id AND r.status = 1) as avg_rating,",
+        "  u.last_login_time as last_login_time",
         "FROM users u",
         "WHERE u.id = #{userId} AND u.deleted = 0"
     })
@@ -171,14 +176,19 @@ public interface UserManageMapper extends BaseMapper<User> {
         @Result(column = "school", property = "user.school"),
         @Result(column = "major", property = "user.major"),
         @Result(column = "avatar", property = "user.avatar"),
+        @Result(column = "avatar_data", property = "user.avatarData"),
+        @Result(column = "id_card_img_data", property = "user.idCardImgData"),
+        @Result(column = "student_card_img_data", property = "user.studentCardImgData"),
         @Result(column = "status", property = "user.status"),
         @Result(column = "verify_status", property = "user.verifyStatus"),
         @Result(column = "verify_reason", property = "user.verifyReason"),
+        @Result(column = "id_card_img_id", property = "user.idCardImgId"),
+        @Result(column = "student_card_img_id", property = "user.studentCardImgId"),
         @Result(column = "ban_reason", property = "banReason"),
         @Result(column = "ban_end_time", property = "banEndTime", jdbcType = JdbcType.TIMESTAMP),
         @Result(column = "created_at", property = "user.createdAt"),
         @Result(column = "updated_at", property = "user.updatedAt"),
-        @Result(column = "verified_at", property = "user.verifiedAt"),
+
         @Result(column = "product_count", property = "productCount"),
         @Result(column = "order_count", property = "orderCount"),
         @Result(column = "review_count", property = "reviewCount"),
@@ -223,6 +233,7 @@ public interface UserManageMapper extends BaseMapper<User> {
     @Update({
         "<script>",
         "UPDATE users SET ",
+        "  status = 1,",
         "  ban_reason = #{reason},",
         "  ban_end_time = #{banEndTime, jdbcType=TIMESTAMP},",
         "  updated_at = NOW()",
@@ -244,9 +255,8 @@ public interface UserManageMapper extends BaseMapper<User> {
         "UPDATE users SET ",
         "  verify_status = #{status},",
         "  verify_reason = #{reason, jdbcType=VARCHAR},",
-        "  verified_at = #{verifiedAt, jdbcType=TIMESTAMP},",
         "  updated_at = NOW()",
-        "WHERE deleted = 0 AND verify_status = 'PENDING' AND id IN",
+        "WHERE deleted = 0 AND verify_status != 2 AND id IN",
         "<foreach collection='userIds' item='userId' open='(' separator=',' close=')'>",
         "  #{userId}",
         "</foreach>",
@@ -254,8 +264,7 @@ public interface UserManageMapper extends BaseMapper<User> {
     })
     int batchVerifyStudentIdentity(@Param("userIds") List<Long> userIds, 
                                    @Param("status") String status, 
-                                   @Param("reason") String reason,
-                                   @Param("verifiedAt") LocalDateTime verifiedAt);
+                                   @Param("reason") String reason);
 
     /**
      * 重置用户密码
@@ -267,4 +276,15 @@ public interface UserManageMapper extends BaseMapper<User> {
         "WHERE id = #{userId} AND deleted = 0"
     })
     int resetUserPassword(@Param("userId") Long userId, @Param("newPassword") String newPassword);
+
+    /**
+     * 删除用户（软删除）
+     */
+    @Update({
+        "UPDATE users SET ",
+        "  deleted = 1,",
+        "  updated_at = NOW()",
+        "WHERE id = #{userId} AND deleted = 0"
+    })
+    int deleteUser(@Param("userId") Long userId);
 }

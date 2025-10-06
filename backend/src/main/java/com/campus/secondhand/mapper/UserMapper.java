@@ -35,7 +35,9 @@ public interface UserMapper extends BaseMapper<User> {
      */
     @Select({
         "<script>",
-        "SELECT u.*, s.name as schoolName FROM users u",
+        "SELECT u.*, ",
+        "  (SELECT i.base64_data FROM imgs i WHERE i.id = u.avatar AND i.status = 1) as avatar_data,",
+        "  s.name as schoolName FROM users u",
         "LEFT JOIN schools s ON u.school_id = s.id",
         "WHERE u.deleted = 0",
         "<if test='keyword != null and keyword != \"\"'>",

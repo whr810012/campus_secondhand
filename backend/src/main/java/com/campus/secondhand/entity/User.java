@@ -43,6 +43,12 @@ public class User {
     private String avatar;
 
     /**
+     * 头像数据（base64）
+     */
+    @TableField(exist = false)
+    private String avatarData;
+
+    /**
      * 学号
      */
     private String studentId;
@@ -104,6 +110,18 @@ public class User {
     private Long studentCardImgId;
 
     /**
+     * 身份证图片数据（base64）
+     */
+    @TableField(exist = false)
+    private String idCardImgData;
+
+    /**
+     * 学生证图片数据（base64）
+     */
+    @TableField(exist = false)
+    private String studentCardImgData;
+
+    /**
      * 信誉分数
      */
     private Integer creditScore;
@@ -145,5 +163,15 @@ public class User {
      */
     @TableLogic
     private Integer deleted;
+
+    /**
+     * 封禁原因
+     */
+    private String banReason;
+
+    /**
+     * 封禁结束时间
+     */
+    private LocalDateTime banEndTime;
 
 }

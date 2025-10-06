@@ -40,7 +40,29 @@ public class ProductManageServiceImpl implements ProductManageService {
                 page, size, keyword, status, auditStatus, categoryId, userId);
         
         Page<Product> pageParam = new Page<>(page, size);
-        return productManageMapper.selectProductList(pageParam, keyword, status, auditStatus, categoryId, userId);
+        Page<Product> result = productManageMapper.selectProductList(pageParam, keyword, status, auditStatus, categoryId, userId);
+        
+        // 为每个商品加载完整的详细信息
+        List<Product> processedRecords = result.getRecords().stream().map(product -> {
+            // 加载商品图片数据
+            loadProductImages(product);
+            
+            // 加载卖家详细信息
+            if (product.getSellerId() != null) {
+                User seller = userMapper.selectById(product.getSellerId());
+                if (seller != null) {
+                    product.setSeller(seller);
+                }
+            }
+            
+            // 处理标签数据
+            loadProductTags(product);
+            
+            return product;
+        }).collect(java.util.stream.Collectors.toList());
+        
+        result.setRecords(processedRecords);
+        return result;
     }
 
     @Override
@@ -101,6 +123,26 @@ public class ProductManageServiceImpl implements ProductManageService {
             }
         } else {
             product.setImageList(new java.util.ArrayList<>());
+        }
+    }
+    
+    /**
+     * 为商品加载标签数据
+     */
+    private void loadProductTags(Product product) {
+        if (product != null && StringUtils.hasText(product.getTags())) {
+            try {
+                // 解析标签集合
+                List<String> tagList = objectMapper.readValue(product.getTags(), 
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                product.setTagList(tagList);
+                log.info("商品标签加载完成: productId={}, 标签数量={}", product.getId(), tagList.size());
+            } catch (Exception e) {
+                log.warn("解析商品{}的标签字段失败: {}", product.getId(), e.getMessage());
+                product.setTagList(new java.util.ArrayList<>());
+            }
+        } else {
+            product.setTagList(new java.util.ArrayList<>());
         }
     }
 
@@ -193,7 +235,7 @@ public class ProductManageServiceImpl implements ProductManageService {
 
             // 验证管理员权限
             User admin = userMapper.selectById(adminId);
-            if (admin == null || !"ADMIN".equals(admin.getRole())) {
+            if (admin == null || !"admin".equals(admin.getRole())) {
                 log.warn("管理员权限验证失败: adminId={}", adminId);
                 return false;
             }
@@ -229,7 +271,7 @@ public class ProductManageServiceImpl implements ProductManageService {
         try {
             // 验证管理员权限
             User admin = userMapper.selectById(adminId);
-            if (admin == null || !"ADMIN".equals(admin.getRole())) {
+            if (admin == null || !"admin".equals(admin.getRole())) {
                 log.warn("管理员权限验证失败: adminId={}", adminId);
                 throw new RuntimeException("管理员权限验证失败");
             }
@@ -259,7 +301,7 @@ public class ProductManageServiceImpl implements ProductManageService {
 
             // 验证管理员权限
             User admin = userMapper.selectById(adminId);
-            if (admin == null || !"ADMIN".equals(admin.getRole())) {
+            if (admin == null || !"admin".equals(admin.getRole())) {
                 log.warn("管理员权限验证失败: adminId={}", adminId);
                 return false;
             }
@@ -351,7 +393,7 @@ public class ProductManageServiceImpl implements ProductManageService {
 
             // 验证管理员权限
             User admin = userMapper.selectById(adminId);
-            if (admin == null || !"ADMIN".equals(admin.getRole())) {
+            if (admin == null || !"admin".equals(admin.getRole())) {
                 log.warn("管理员权限验证失败: adminId={}", adminId);
                 return false;
             }

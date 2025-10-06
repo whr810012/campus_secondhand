@@ -15,17 +15,20 @@ public interface OrderService {
      *
      * @param productId 商品ID
      * @param buyerId 买家ID
-     * @param tradeType 交易方式
+     * @param sellerId 卖家ID
+     * @param amount 订单金额
+     * @param tradeType 交易类型
      * @param tradeLocation 交易地点
      * @param deliveryAddress 收货地址
      * @param receiverName 收货人姓名
      * @param receiverPhone 收货人电话
+     * @param paymentMethod 支付方式
      * @param remark 备注
      * @return 订单
      */
-    Order createOrder(Long productId, Long buyerId, Integer tradeType, 
+    Order createOrder(Long productId, Long buyerId, Long sellerId, Double amount, Integer tradeType, 
                      String tradeLocation, String deliveryAddress, 
-                     String receiverName, String receiverPhone, String remark);
+                     String receiverName, String receiverPhone, String paymentMethod, String remark);
 
     /**
      * 根据ID获取订单详情
@@ -42,10 +45,12 @@ public interface OrderService {
      * @param page 页码
      * @param size 每页大小
      * @param status 订单状态
-     * @param type 订单类型：buy-购买订单，sell-销售订单
+     * @param keyword 关键词搜索
+     * @param startDate 开始日期
+     * @param endDate 结束日期
      * @return 订单分页数据
      */
-    Page<Order> getUserOrders(Long userId, int page, int size, String status, String type);
+    Page<Order> getUserOrders(Long userId, int page, int size, String status, String keyword, String startDate, String endDate);
 
     /**
      * 支付订单

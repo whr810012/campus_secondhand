@@ -42,7 +42,7 @@
         <el-col :span="6">
           <div class="stat-card">
             <div class="stat-icon processing">
-              <el-icon><Truck /></el-icon>
+              <el-icon><Clock /></el-icon>
             </div>
             <div class="stat-content">
               <div class="stat-number">{{ stats.processing }}</div>
@@ -428,7 +428,6 @@ import {
   Refresh,
   Document,
   Clock,
-  Truck,
   Check
 } from '@element-plus/icons-vue'
 

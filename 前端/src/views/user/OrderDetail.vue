@@ -237,13 +237,15 @@ import {
   getOrderDetail, 
   payOrder as payOrderApi, 
   cancelOrder as cancelOrderApi,
-  confirmReceived as confirmReceivedApi,
+  confirmReceipt as confirmReceivedApi,
   submitOrderReview
 } from '@/api/order'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 // 响应式数据
 const loading = ref(false)
@@ -303,7 +305,7 @@ const contactSeller = () => {
 const payOrder = async () => {
   try {
     actionLoading.value = true
-    await payOrderApi(order.value.id)
+    await payOrderApi(order.value.id, {})
     ElMessage.success('支付成功')
     fetchOrderDetail()
   } catch (error) {
@@ -344,8 +346,13 @@ const cancelOrder = async () => {
 // 确认收货
 const confirmReceived = async () => {
   try {
+    if (!userStore.userInfo?.id) {
+      ElMessage.error('用户信息获取失败，请重新登录')
+      return
+    }
+    
     await ElMessageBox.confirm(
-      '确定已收到商品吗？确认后将无法申请退款。',
+      '确定已收到商品吗？',
       '确认收货',
       {
         confirmButtonText: '确定',
@@ -355,7 +362,7 @@ const confirmReceived = async () => {
     )
     
     actionLoading.value = true
-    await confirmReceivedApi(order.value.id)
+    await confirmReceivedApi(order.value.id, userStore.userInfo.id)
     ElMessage.success('确认收货成功')
     fetchOrderDetail()
   } catch (error) {
@@ -483,6 +490,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@import '@/styles/variables.scss';
+
 .order-detail {
   padding: 20px;
   max-width: 1200px;
