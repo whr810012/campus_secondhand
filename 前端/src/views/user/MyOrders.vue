@@ -14,8 +14,6 @@
         <el-tab-pane label="已完成" name="completed" />
         <el-tab-pane label="已取消" name="cancelled" />
       </el-tabs>
-      
-
     </div>
 
     <!-- 订单列表 -->
@@ -23,7 +21,7 @@
       <div class="order-card" v-for="order in orders" :key="order.id">
         <div class="order-header">
           <div class="order-info">
-            <span class="order-number">订单号：{{ order.orderNo }}</span>
+            <span class="order-number">订单号:{{ order.orderNo }}</span>
             <span class="order-time">{{ formatTime(order.createdAt) }}</span>
           </div>
           <div class="order-status" :class="getStatusClass(order.status)">
@@ -52,23 +50,23 @@
           
           <div class="order-details">
             <div class="detail-item">
-              <span class="label">订单金额：</span>
+              <span class="label">订单金额:</span>
               <span class="value price">¥{{ order.amount }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">支付方式：</span>
+              <span class="label">支付方式:</span>
               <span class="value">{{ getPaymentMethodText(order.paymentMethod) }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">交易方式：</span>
+              <span class="label">交易方式:</span>
               <span class="value">{{ getTradeTypeText(order.tradeType) }}</span>
             </div>
             <div class="detail-item" v-if="order.tradeLocation">
-              <span class="label">交易地点：</span>
+              <span class="label">交易地点:</span>
               <span class="value">{{ order.tradeLocation }}</span>
             </div>
             <div class="detail-item" v-if="order.remark">
-              <span class="label">备注：</span>
+              <span class="label">备注:</span>
               <span class="value">{{ order.remark }}</span>
             </div>
           </div>
@@ -170,13 +168,164 @@
         <el-button type="primary" @click="submitReview">提交评价</el-button>
       </template>
     </el-dialog>
+
+    <!-- 订单详情对话框 -->
+    <el-dialog v-model="showOrderDetailDialog" title="订单详情" width="600px">
+      <div class="order-detail-content">
+        <!-- 订单基本信息 -->
+        <el-card class="order-info-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <span>订单信息</span>
+            </div>
+          </template>
+          <div class="order-info">
+            <div class="info-row">
+              <span class="label">订单号:</span>
+              <span class="value">{{ selectedOrder.orderNo }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">订单状态:</span>
+              <el-tag :type="getStatusClass(selectedOrder.status)" size="small">
+                {{ getStatusText(selectedOrder.status) }}
+              </el-tag>
+            </div>
+            <div class="info-row">
+              <span class="label">订单金额:</span>
+              <span class="value price">¥{{ selectedOrder.amount }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">下单时间:</span>
+              <span class="value">{{ formatTime(selectedOrder.createdAt) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.paymentTime">
+              <span class="label">支付时间:</span>
+              <span class="value">{{ formatTime(selectedOrder.paymentTime) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.shippedTime">
+              <span class="label">发货时间:</span>
+              <span class="value">{{ formatTime(selectedOrder.shippedTime) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.completedTime">
+              <span class="label">完成时间:</span>
+              <span class="value">{{ formatTime(selectedOrder.completedTime) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">支付方式:</span>
+              <span class="value">{{ getPaymentMethodText(selectedOrder.paymentMethod) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">交易方式:</span>
+              <span class="value">{{ getTradeTypeText(selectedOrder.tradeType) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.tradeLocation">
+              <span class="label">交易地点:</span>
+              <span class="value">{{ selectedOrder.tradeLocation }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.remark">
+              <span class="label">备注:</span>
+              <span class="value">{{ selectedOrder.remark }}</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 商品信息 -->
+        <el-card class="product-info-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <span>商品信息</span>
+            </div>
+          </template>
+          <div class="product-detail" v-if="selectedOrder.product">
+            <div class="product-image">
+              <img v-if="selectedOrder.product.imageList && selectedOrder.product.imageList.length > 0" 
+                   :src="selectedOrder.product.imageList[0]" 
+                   :alt="selectedOrder.product.title" />
+              <div v-else class="placeholder-image">
+                <el-icon><Picture /></el-icon>
+              </div>
+            </div>
+            <div class="product-info">
+              <h4>{{ selectedOrder.product.title }}</h4>
+              <p class="product-desc">{{ selectedOrder.product.description }}</p>
+              <div class="product-meta">
+                <div class="meta-item">
+                  <span class="label">价格:</span>
+                  <span class="value price">¥{{ selectedOrder.product.price }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="label">成色:</span>
+                  <span class="value">{{ getConditionText(selectedOrder.product.condition) }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="label">交易方式:</span>
+                  <span class="value">{{ getTradeTypeText(selectedOrder.product.tradeType) }}</span>
+                </div>
+                <div class="meta-item" v-if="selectedOrder.product.location">
+                  <span class="label">交易地点:</span>
+                  <span class="value">{{ selectedOrder.product.location }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="product-placeholder">
+            <div class="placeholder-image">
+              <el-icon><Picture /></el-icon>
+            </div>
+            <div class="product-info">
+              <h4>商品信息不可用</h4>
+              <p class="product-desc">商品ID: {{ selectedOrder.productId }}</p>
+              <div class="product-meta">
+                <div class="meta-item">
+                  <span class="label">价格:</span>
+                  <span class="value price">¥{{ selectedOrder.amount }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+      
+      <template #footer>
+        <el-button @click="showOrderDetailDialog = false">关闭</el-button>
+        <el-button
+          v-if="selectedOrder.status === 'pending'"
+          type="primary"
+          @click="payOrder(selectedOrder)"
+        >
+          立即付款
+        </el-button>
+        <el-button
+          v-if="selectedOrder.status === 'paid'"
+          type="success"
+          @click="confirmReceipt(selectedOrder)"
+        >
+          确认收货
+        </el-button>
+        <el-button
+          v-if="['pending', 'paid'].includes(selectedOrder.status)"
+          @click="cancelOrder(selectedOrder)"
+        >
+          取消订单
+        </el-button>
+        <el-button
+          v-if="selectedOrder.status === 'completed' && !selectedOrder.buyerRated"
+          @click="reviewOrder(selectedOrder)"
+        >
+          评价
+        </el-button>
+        <el-button @click="contactSeller(selectedOrder)">
+          联系卖家
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Picture } from '@element-plus/icons-vue'
 import { getUserOrders, payOrder as payOrderApi, cancelOrder as cancelOrderApi, confirmReceipt as confirmReceiptApi, reviewOrder as reviewOrderApi } from '@/api/order'
 import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
@@ -200,6 +349,10 @@ const reviewForm = reactive({
   content: '',
   images: []
 })
+
+// 订单详情对话框
+const showOrderDetailDialog = ref(false)
+const selectedOrder = ref({})
 
 // 获取订单列表
 const fetchOrders = async () => {
@@ -256,7 +409,8 @@ const viewProduct = (product) => {
 
 // 查看订单详情
 const viewOrderDetail = (order) => {
-  window.open(`/order/${order.id}`, '_blank')
+  selectedOrder.value = order
+  showOrderDetailDialog.value = true
 }
 
 // 付款
@@ -282,7 +436,310 @@ const payOrder = async (order) => {
     }
   }
 }
+</script>
 
+<style lang="scss" scoped>
+.my-orders {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+}
+
+.filter-bar {
+  margin-bottom: 24px;
+  
+  .el-tabs {
+    .el-tabs__header {
+      margin: 0;
+    }
+  }
+}
+
+.orders-container {
+  .order-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+    overflow: hidden;
+    
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #eee;
+      
+      .order-info {
+        .order-no {
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-right: 16px;
+        }
+        
+        .order-time {
+          color: var(--text-secondary);
+          font-size: 14px;
+        }
+      }
+      
+      .order-status {
+        .status-tag {
+          padding: 4px 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          
+          &.pending {
+            background: #fff7e6;
+            color: #fa8c16;
+          }
+          
+          &.paid {
+            background: #e6f7ff;
+            color: #1890ff;
+          }
+          
+          &.shipped {
+            background: #f6ffed;
+            color: #52c41a;
+          }
+          
+          &.completed {
+            background: #f6ffed;
+            color: #52c41a;
+          }
+          
+          &.cancelled {
+            background: #fff2f0;
+            color: #ff4d4f;
+          }
+        }
+      }
+    }
+    
+    .order-content {
+      padding: 20px;
+      
+      .product-info {
+        display: flex;
+        margin-bottom: 16px;
+        
+        .product-image {
+          width: 80px;
+          height: 80px;
+          border-radius: 8px;
+          object-fit: cover;
+          margin-right: 16px;
+        }
+        
+        .product-details {
+          flex: 1;
+          
+          .product-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          
+          .product-desc {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          
+          .product-price {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ff4d4f;
+          }
+        }
+      }
+      
+      .order-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+        
+        .detail-item {
+          display: flex;
+          align-items: center;
+          
+          .label {
+            color: var(--text-secondary);
+            margin-right: 8px;
+            min-width: 80px;
+          }
+          
+          .value {
+            color: var(--text-primary);
+            font-weight: 500;
+          }
+        }
+      }
+      
+      .order-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        
+        .el-button {
+          min-width: 80px;
+        }
+      }
+    }
+  }
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.order-detail-content {
+    .order-info-card,
+    .product-info-card {
+      margin-bottom: 16px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .card-header {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+    }
+    
+    .order-info {
+      .info-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        .label {
+          font-weight: 500;
+          color: var(--text-secondary);
+          min-width: 80px;
+        }
+        
+        .value {
+          color: var(--text-primary);
+          
+          &.price {
+            font-weight: 600;
+            color: var(--danger-color);
+          }
+        }
+      }
+    }
+    
+    .product-detail,
+    .product-placeholder {
+      display: flex;
+      gap: 16px;
+      
+      .product-image,
+      .placeholder-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-secondary);
+        
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .el-icon {
+          font-size: 32px;
+          color: var(--text-secondary);
+        }
+      }
+      
+      .product-info {
+        flex: 1;
+        
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: var(--text-primary);
+        }
+        
+        .product-desc {
+          font-size: 14px;
+          color: var(--text-secondary);
+          margin-bottom: 12px;
+          line-height: 1.5;
+        }
+        
+        .product-meta {
+          .meta-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            
+            &:last-child {
+              margin-bottom: 0;
+            }
+            
+            .label {
+              font-size: 13px;
+              color: var(--text-secondary);
+              min-width: 70px;
+            }
+            
+            .value {
+              font-size: 13px;
+              color: var(--text-primary);
+              
+              &.price {
+                font-weight: 600;
+                color: var(--danger-color);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+</style>
+
+<script>
 // 取消订单
 const cancelOrder = async (order) => {
   try {
@@ -546,7 +1003,19 @@ onMounted(() => {
             background: var(--bg-secondary);
           }
           
-
+          .product-image {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--border-radius-base);
+            overflow: hidden;
+            margin-right: 16px;
+            
+            img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
+          }
           
           .product-details {
             flex: 1;
@@ -592,7 +1061,17 @@ onMounted(() => {
           display: flex;
           margin-bottom: 16px;
           
-
+          .placeholder-image {
+            width: 80px;
+            height: 80px;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-base);
+            margin-right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+          }
           
           .product-details {
             flex: 1;
@@ -666,7 +1145,9 @@ onMounted(() => {
   .my-orders {
     padding: 16px;
     
-
+    .filter-bar {
+      padding: 12px;
+    }
     
     .orders-container {
       .order-card {
@@ -713,9 +1194,11 @@ onMounted(() => {
             flex-direction: column;
             text-align: center;
             
-            img,
+            .product-image,
             .placeholder-image {
               align-self: center;
+              margin-right: 0;
+              margin-bottom: 12px;
             }
           }
           

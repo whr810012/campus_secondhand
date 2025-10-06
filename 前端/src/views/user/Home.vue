@@ -128,23 +128,6 @@
               </div>
               
               <div class="product-footer">
-                <div class="seller-info">
-                  <el-avatar :src="product.seller?.avatar" :size="24">
-                    {{ product.seller?.nickname?.charAt(0) }}
-                  </el-avatar>
-                  <span class="seller-name">{{ product.seller?.nickname }}</span>
-                </div>
-                
-                <div class="product-tags">
-                  <el-tag
-                    v-for="tag in product.tags?.slice(0, 2)"
-                    :key="tag"
-                    size="small"
-                    type="info"
-                  >
-                    {{ tag }}
-                  </el-tag>
-                </div>
               </div>
             </div>
           </div>

@@ -177,14 +177,13 @@
                     <h4>{{ order.product?.title }}</h4>
                     <p>{{ order.product?.description }}</p>
                     <div class="price-info">
-                      <span class="price">¥{{ order.totalAmount }}</span>
-                      <span class="quantity">x{{ order.quantity }}</span>
+                      <span class="price">¥{{ order.amount }}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div class="order-actions">
-                  <el-button size="small" @click="viewOrderDetail(order.id)">
+                  <el-button size="small" @click="viewOrderDetail(order)">
                     查看详情
                   </el-button>
                   <el-button
@@ -399,6 +398,106 @@
         <el-button type="primary" @click="changePassword">确认修改</el-button>
       </template>
     </el-dialog>
+
+    <!-- 订单详情对话框 -->
+    <el-dialog v-model="showOrderDetailDialog" title="订单详情" width="600px">
+      <div class="order-detail-content">
+        <!-- 订单基本信息 -->
+        <el-card class="order-info-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <span>订单信息</span>
+            </div>
+          </template>
+          <div class="order-info">
+            <div class="info-row">
+              <span class="label">订单号：</span>
+              <span class="value">{{ selectedOrder.orderNo }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">订单状态：</span>
+              <el-tag :type="getOrderStatusType(selectedOrder.status)" size="small">
+                {{ getOrderStatusText(selectedOrder.status) }}
+              </el-tag>
+            </div>
+            <div class="info-row">
+              <span class="label">订单金额：</span>
+              <span class="value price">¥{{ selectedOrder.amount }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">下单时间：</span>
+              <span class="value">{{ formatDate(selectedOrder.createdAt) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.paymentTime">
+              <span class="label">支付时间：</span>
+              <span class="value">{{ formatDate(selectedOrder.paymentTime) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.shippedTime">
+              <span class="label">发货时间：</span>
+              <span class="value">{{ formatDate(selectedOrder.shippedTime) }}</span>
+            </div>
+            <div class="info-row" v-if="selectedOrder.completedTime">
+              <span class="label">完成时间：</span>
+              <span class="value">{{ formatDate(selectedOrder.completedTime) }}</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 商品信息 -->
+        <el-card class="product-info-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <span>商品信息</span>
+            </div>
+          </template>
+          <div class="product-detail" v-if="selectedOrder.product">
+            <div class="product-image">
+              <img :src="getProductImage(selectedOrder.product.images)" :alt="selectedOrder.product.title" />
+            </div>
+            <div class="product-info">
+              <h4>{{ selectedOrder.product.title }}</h4>
+              <p class="product-desc">{{ selectedOrder.product.description }}</p>
+              <div class="product-meta">
+                <div class="meta-item">
+                  <span class="label">价格：</span>
+                  <span class="value price">¥{{ selectedOrder.product.price }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="label">成色：</span>
+                  <span class="value">{{ getConditionText(selectedOrder.product.condition) }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="label">交易方式：</span>
+                  <span class="value">{{ getTradeTypeText(selectedOrder.product.tradeType) }}</span>
+                </div>
+                <div class="meta-item" v-if="selectedOrder.product.location">
+                  <span class="label">交易地点：</span>
+                  <span class="value">{{ selectedOrder.product.location }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+      
+      <template #footer>
+        <el-button @click="showOrderDetailDialog = false">关闭</el-button>
+        <el-button
+          v-if="selectedOrder.status === 'pending'"
+          type="primary"
+          @click="payOrder(selectedOrder.id)"
+        >
+          立即付款
+        </el-button>
+        <el-button
+          v-if="selectedOrder.status === 'shipped'"
+          type="success"
+          @click="confirmReceive(selectedOrder.id)"
+        >
+          确认收货
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -428,8 +527,10 @@ const showEditDialog = ref(false)
 const showAvatarDialog = ref(false)
 const showPasswordDialog = ref(false)
 const showPhoneDialog = ref(false)
+const showOrderDetailDialog = ref(false)
 const previewAvatar = ref('')
 const passwordFormRef = ref()
+const selectedOrder = ref({})
 
 
 
@@ -807,12 +908,13 @@ const handleDeleteProduct = (productId) => {
   })
 }
 
-const viewOrderDetail = (orderId) => {
-  router.push(`/order/${orderId}`)
-}
-
 const payOrder = (orderId) => {
   router.push(`/order/pay/${orderId}`)
+}
+
+const viewOrderDetail = (order) => {
+  selectedOrder.value = order
+  showOrderDetailDialog.value = true
 }
 
 const confirmReceive = (orderId) => {
@@ -1377,6 +1479,115 @@ watch(activeTab, (newTab) => {
       margin-top: 12px;
       font-size: 14px;
       color: var(--text-secondary);
+    }
+  }
+
+  // 订单详情弹窗样式
+  .order-detail-content {
+    .order-info-card,
+    .product-info-card {
+      margin-bottom: 16px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .card-header {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+    }
+    
+    .order-info {
+      .info-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        .label {
+          font-weight: 500;
+          color: var(--text-secondary);
+          min-width: 80px;
+        }
+        
+        .value {
+          color: var(--text-primary);
+          
+          &.price {
+            font-weight: 600;
+            color: var(--color-primary);
+          }
+        }
+      }
+    }
+    
+    .product-detail {
+      display: flex;
+      gap: 16px;
+      
+      .product-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+        
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+      
+      .product-info {
+        flex: 1;
+        
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: var(--text-primary);
+        }
+        
+        .product-desc {
+          font-size: 14px;
+          color: var(--text-secondary);
+          margin-bottom: 12px;
+          line-height: 1.5;
+        }
+        
+        .product-meta {
+          .meta-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            
+            &:last-child {
+              margin-bottom: 0;
+            }
+            
+            .label {
+              font-size: 13px;
+              color: var(--text-secondary);
+              min-width: 70px;
+            }
+            
+            .value {
+              font-size: 13px;
+              color: var(--text-primary);
+              
+              &.price {
+                font-weight: 600;
+                color: var(--color-primary);
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

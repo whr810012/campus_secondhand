@@ -7,6 +7,7 @@ import com.campus.secondhand.entity.Product;
 import com.campus.secondhand.mapper.OrderMapper;
 import com.campus.secondhand.mapper.ProductMapper;
 import com.campus.secondhand.service.OrderService;
+import com.campus.secondhand.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
     private final ProductMapper productMapper;
+    private final ProductService productService;
 
     @Override
     @Transactional
@@ -86,7 +88,8 @@ public class OrderServiceImpl implements OrderService {
     public Order getOrderById(Long id) {
         Order order = orderMapper.selectById(id);
         if (order != null && order.getProductId() != null) {
-            Product product = productMapper.selectById(order.getProductId());
+            // 使用ProductService的getProductById方法来获取包含图片数据的商品信息
+            Product product = productService.getProductById(order.getProductId());
             order.setProduct(product);
         }
         return order;
@@ -122,7 +125,8 @@ public class OrderServiceImpl implements OrderService {
         // 为每个订单关联商品信息
         for (Order order : orderPage.getRecords()) {
             if (order.getProductId() != null) {
-                Product product = productMapper.selectById(order.getProductId());
+                // 使用ProductService的getProductById方法来获取包含图片数据的商品信息
+                Product product = productService.getProductById(order.getProductId());
                 order.setProduct(product);
             }
         }
