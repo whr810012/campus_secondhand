@@ -39,19 +39,9 @@
             <template #title>分类管理</template>
           </el-menu-item>
           
-          <el-menu-item index="/admin/audit">
-            <el-icon><View /></el-icon>
-            <template #title>内容审核</template>
-          </el-menu-item>
-          
           <el-menu-item index="/admin/announcements">
             <el-icon><Bell /></el-icon>
             <template #title>公告管理</template>
-          </el-menu-item>
-          
-          <el-menu-item index="/admin/logs">
-            <el-icon><Document /></el-icon>
-            <template #title>操作日志</template>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -140,9 +130,7 @@ const currentPageTitle = computed(() => {
     '/admin/products': '商品管理',
     '/admin/orders': '订单管理',
     '/admin/categories': '分类管理',
-    '/admin/audit': '内容审核',
-    '/admin/announcements': '公告管理',
-    '/admin/logs': '操作日志'
+    '/admin/announcements': '公告管理'
   }
   return titleMap[route.path] || '管理后台'
 })

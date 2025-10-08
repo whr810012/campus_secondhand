@@ -112,10 +112,6 @@
                 <span class="value">{{ formatDate(product.createdAt) }}</span>
               </div>
               
-              <div class="meta-item">
-                <span class="label">浏览量：</span>
-                <span class="value">{{ product.viewCount }}</span>
-              </div>
               
               <div class="meta-item">
                 <span class="label">收藏量：</span>
@@ -169,13 +165,6 @@
                 @click="handlePurchase"
               >
                 立即购买
-              </el-button>
-              <el-button
-                size="large"
-                class="cart-button"
-                @click="handleAddToCart"
-              >
-                加入购物车
               </el-button>
             </div>
             
@@ -605,23 +594,6 @@ const handlePurchase = () => {
   router.push(`/order/confirm?productId=${product.value.id}`)
 }
 
-// 加入购物车
-const handleAddToCart = () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
-  
-  if (product.value.seller?.id === userStore.userInfo?.id) {
-    ElMessage.warning('不能购买自己的商品')
-    return
-  }
-  
-  // TODO: 调用加入购物车API
-  ElMessage.success('已加入购物车')
-}
-
 // 跳转到其他商品
 const goToProduct = (productId) => {
   router.push(`/product/${productId}`)
@@ -836,8 +808,7 @@ onMounted(() => {
         display: flex;
         gap: 12px;
         
-        .buy-button,
-        .cart-button {
+        .buy-button {
           flex: 1;
         }
       }

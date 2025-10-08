@@ -118,6 +118,8 @@ public class OrderServiceImpl implements OrderService {
             queryWrapper.between(Order::getCreatedAt, startDate, endDate);
         }
         
+        // 只查询未删除的订单
+        queryWrapper.eq(Order::getDeleted, 0);
         queryWrapper.orderByDesc(Order::getCreatedAt);
         
         Page<Order> orderPage = orderMapper.selectPage(pageParam, queryWrapper);
@@ -310,7 +312,8 @@ public class OrderServiceImpl implements OrderService {
         // 为每个订单关联商品信息
         for (Order order : orderPage.getRecords()) {
             if (order.getProductId() != null) {
-                Product product = productMapper.selectById(order.getProductId());
+                // 使用ProductService的getProductById方法来获取包含图片数据的商品信息
+                Product product = productService.getProductById(order.getProductId());
                 order.setProduct(product);
             }
         }
@@ -324,6 +327,34 @@ public class OrderServiceImpl implements OrderService {
         
         // 直接调用已有的getAllOrders方法
         return getAllOrders(page, size, status, keyword);
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteOrder(Long orderId, Long userId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null || order.getDeleted() == 1) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 检查权限：只有买家、卖家或管理员可以删除订单
+        if (!order.getBuyerId().equals(userId) && !order.getSellerId().equals(userId)) {
+            // 这里可以添加管理员权限检查
+            throw new RuntimeException("无权限删除此订单");
+        }
+        
+        // 只有已取消或已完成的订单才能删除
+        if (!"cancelled".equals(order.getStatus()) && !"completed".equals(order.getStatus()) && !"refunded".equals(order.getStatus())) {
+            throw new RuntimeException("只能删除已取消、已完成或已退款的订单");
+        }
+
+        // 使用MyBatis-Plus的逻辑删除功能
+        int result = orderMapper.deleteById(orderId);
+        
+        if (result > 0) {
+            log.info("删除订单成功，订单号：{}", order.getOrderNo());
+        }
+        return result > 0;
     }
 
     /**

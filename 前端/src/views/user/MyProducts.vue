@@ -35,7 +35,6 @@
         <el-select v-model="sortBy" placeholder="排序方式" style="width: 120px" @change="handleSort">
           <el-option label="发布时间" value="created_at" />
           <el-option label="更新时间" value="updated_at" />
-          <el-option label="浏览量" value="views" />
           <el-option label="价格" value="price" />
         </el-select>
       </div>

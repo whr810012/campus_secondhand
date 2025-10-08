@@ -126,7 +126,7 @@ public interface UserManageMapper extends BaseMapper<User> {
         "SELECT * FROM users",
         "WHERE deleted = 0 AND verify_status = 'PENDING'",
         "<if test='keyword != null and keyword != \"\"'>",
-        "  AND (username LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
+        "  AND (nickname LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR phone LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR student_id LIKE CONCAT('&#37;', #{keyword}, '&#37;')",
         "    OR real_name LIKE CONCAT('&#37;', #{keyword}, '&#37;'))",
@@ -168,7 +168,7 @@ public interface UserManageMapper extends BaseMapper<User> {
     })
     @Results({
         @Result(column = "id", property = "user.id"),
-        @Result(column = "username", property = "user.username"),
+        @Result(column = "nickname", property = "user.nickname"),
         @Result(column = "phone", property = "user.phone"),
         @Result(column = "email", property = "user.email"),
         @Result(column = "real_name", property = "user.realName"),

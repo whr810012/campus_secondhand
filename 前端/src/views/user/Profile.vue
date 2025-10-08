@@ -32,22 +32,6 @@
               <span class="join-date">加入时间：{{ formatDate(userInfo.createdAt) }}</span>
             </div>
             <div class="user-stats">
-              <div class="stat-item">
-                <span class="stat-value">{{ userStats.productCount }}</span>
-                <span class="stat-label">发布商品</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ userStats.orderCount }}</span>
-                <span class="stat-label">交易订单</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ userStats.favoriteCount }}</span>
-                <span class="stat-label">收藏商品</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-value">{{ userInfo.creditScore || 0 }}</span>
-                <span class="stat-label">信誉积分</span>
-              </div>
             </div>
           </div>
           
@@ -190,7 +174,7 @@
                     v-if="order.status === 'pending'"
                     size="small"
                     type="primary"
-                    @click="payOrder(order.id)"
+                    @click="payOrder(order)"
                   >
                     立即付款
                   </el-button>
@@ -232,7 +216,7 @@
               <el-button 
                 type="primary" 
                 size="small" 
-                @click="$router.push('/user/favorites')"
+                @click="$router.push('/my-orders')"
               >
                 查看全部
               </el-button>
@@ -485,7 +469,7 @@
         <el-button
           v-if="selectedOrder.status === 'pending'"
           type="primary"
-          @click="payOrder(selectedOrder.id)"
+          @click="payOrder(selectedOrder)"
         >
           立即付款
         </el-button>
@@ -518,6 +502,7 @@ import {
 } from '@/api/auth'
 import { deleteProduct } from '@/api/product'
 import { removeFromFavorites } from '@/api/favorite'
+import { payOrder as payOrderApi } from '@/api/order'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -908,8 +893,27 @@ const handleDeleteProduct = (productId) => {
   })
 }
 
-const payOrder = (orderId) => {
-  router.push(`/order/pay/${orderId}`)
+const payOrder = async (order) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要支付订单"${order.orderNo}"吗？`,
+      '确认支付',
+      {
+        confirmButtonText: '确定支付',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+    
+    await payOrderApi(order.id, {})
+    ElMessage.success('支付成功')
+    fetchMyOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('支付失败:', error)
+      ElMessage.error('支付失败')
+    }
+  }
 }
 
 const viewOrderDetail = (order) => {

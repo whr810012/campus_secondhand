@@ -4,6 +4,7 @@ import com.campus.secondhand.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * JWT认证过滤器
@@ -38,17 +40,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token) && jwtUtil.validateToken(token)) {
             Long userId = jwtUtil.getUserIdFromToken(token);
             String phone = jwtUtil.getPhoneFromToken(token);
+            String role = jwtUtil.getRoleFromToken(token);
             
             if (userId != null && phone != null) {
+                // 创建权限列表
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if (StringUtils.hasText(role)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                }
+                
                 // 创建认证对象
                 UsernamePasswordAuthenticationToken authentication = 
-                    new UsernamePasswordAuthenticationToken(userId, null, new ArrayList<>());
+                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 
                 // 设置到Security上下文
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 
-                log.debug("JWT认证成功，用户ID: {}, 手机号: {}", userId, phone);
+                log.debug("JWT认证成功，用户ID: {}, 手机号: {}, 角色: {}", userId, phone, role);
             }
         }
         

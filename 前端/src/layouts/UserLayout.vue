@@ -119,30 +119,6 @@
     <main class="main-content">
       <router-view />
     </main>
-    
-    <!-- 底部 -->
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-content">
-          <div class="footer-section">
-            <h4>关于我们</h4>
-            <p>校园二手交易平台致力于为在校学生提供安全、便捷的二手商品交易服务。</p>
-          </div>
-          <div class="footer-section">
-            <h4>联系我们</h4>
-            <p>邮箱: campus-secondhand@example.com</p>
-            <p>电话: 400-123-4567</p>
-          </div>
-          <div class="footer-section">
-            <h4>友情链接</h4>
-            <p>学校官网 | 学生会 | 社团联合会</p>
-          </div>
-        </div>
-        <div class="footer-bottom">
-          <p>&copy; 2024 校园二手交易平台. All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -331,39 +307,6 @@ onMounted(async () => {
   padding: 20px 0;
 }
 
-.footer {
-  background: #2c3e50;
-  color: white;
-  padding: 40px 0 20px;
-  
-  .footer-content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px;
-    margin-bottom: 30px;
-  }
-  
-  .footer-section {
-    h4 {
-      margin-bottom: 15px;
-      font-size: 16px;
-    }
-    
-    p {
-      color: #bdc3c7;
-      line-height: 1.6;
-      margin-bottom: 8px;
-    }
-  }
-  
-  .footer-bottom {
-    text-align: center;
-    padding-top: 20px;
-    border-top: 1px solid #34495e;
-    color: #bdc3c7;
-  }
-}
-
 @media (max-width: 768px) {
   .header {
     .header-content {
@@ -388,13 +331,6 @@ onMounted(async () => {
           display: none;
         }
       }
-    }
-  }
-  
-  .footer {
-    .footer-content {
-      grid-template-columns: 1fr;
-      gap: 20px;
     }
   }
 }

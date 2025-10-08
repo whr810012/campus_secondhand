@@ -54,9 +54,13 @@ public class SecurityConfig {
                 .antMatchers("/schools/**").permitAll()
                 // 允许访问商品接口
                 .antMatchers("/products/**").permitAll()
+                // 允许访问公告接口（用户端）
+                .antMatchers("/announcements/**").permitAll()
                 // 允许访问用户公开信息接口
                 .antMatchers("/user/profile/**").permitAll()
                 .antMatchers("/user/*/products").permitAll()
+                // 管理员接口需要admin角色
+                .antMatchers("/admin/**").hasRole("ADMIN")
                 // 其他用户相关接口需要认证
                 .antMatchers("/user/**").authenticated()
                 // 消息相关接口需要认证

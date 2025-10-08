@@ -288,4 +288,27 @@ public class OrderController {
         Page<Order> orders = orderService.getOrderListForAdmin(page, size, status, keyword);
         return Result.success(orders);
     }
+
+    /**
+     * 删除订单
+     */
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteOrder(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+        try {
+            // 从token中解析用户ID
+            Long userId = jwtUtil.getUserIdFromToken(token.replace("Bearer ", ""));
+            if (userId == null) {
+                return Result.error("无效的token");
+            }
+            
+            boolean success = orderService.deleteOrder(id, userId);
+            if (success) {
+                return Result.success();
+            } else {
+                return Result.error("删除失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

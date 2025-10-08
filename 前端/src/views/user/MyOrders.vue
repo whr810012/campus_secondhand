@@ -5,23 +5,14 @@
       <h2>我的订单</h2>
     </div>
 
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="全部" name="all" />
-        <el-tab-pane label="待付款" name="pending" />
-        <el-tab-pane label="已付款" name="paid" />
-        <el-tab-pane label="已完成" name="completed" />
-        <el-tab-pane label="已取消" name="cancelled" />
-      </el-tabs>
-    </div>
+
 
     <!-- 订单列表 -->
     <div class="orders-container" v-loading="loading">
       <div class="order-card" v-for="order in orders" :key="order.id">
         <div class="order-header">
           <div class="order-info">
-            <span class="order-number">订单号:{{ order.orderNo }}</span>
+            <span class="order-number">订单号: {{ order.orderNo }}</span>
             <span class="order-time">{{ formatTime(order.createdAt) }}</span>
           </div>
           <div class="order-status" :class="getStatusClass(order.status)">
@@ -106,10 +97,6 @@
           <el-button @click="viewOrderDetail(order)">
             查看详情
           </el-button>
-          
-          <el-button @click="contactSeller(order)">
-            联系卖家
-          </el-button>
         </div>
       </div>
       
@@ -168,6 +155,8 @@
         <el-button type="primary" @click="submitReview">提交评价</el-button>
       </template>
     </el-dialog>
+
+</div>
 
     <!-- 订单详情对话框 -->
     <el-dialog v-model="showOrderDetailDialog" title="订单详情" width="600px">
@@ -314,12 +303,10 @@
         >
           评价
         </el-button>
-        <el-button @click="contactSeller(selectedOrder)">
-          联系卖家
-        </el-button>
       </template>
     </el-dialog>
-  </div>
+  <!-- </div> -->
+
 </template>
 
 <script setup>
@@ -339,7 +326,6 @@ const orders = ref([])
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
-const activeTab = ref('all')
 
 // 评价对话框
 const reviewDialogVisible = ref(false)
@@ -360,8 +346,7 @@ const fetchOrders = async () => {
     loading.value = true
     const params = {
       page: currentPage.value,
-      size: pageSize.value,
-      status: activeTab.value === 'all' ? '' : activeTab.value
+      size: pageSize.value
     }
     
     const response = await getUserOrders(params)
@@ -381,12 +366,10 @@ const fetchOrders = async () => {
   }
 }
 
-// 标签页切换
-const handleTabChange = (tab) => {
-  activeTab.value = tab
-  currentPage.value = 1
+// 页面挂载时立即获取订单
+onMounted(() => {
   fetchOrders()
-}
+})
 
 
 
@@ -436,6 +419,161 @@ const payOrder = async (order) => {
     }
   }
 }
+
+// 取消订单
+const cancelOrder = async (order) => {
+  try {
+    const { value: reason } = await ElMessageBox.prompt(
+      '请输入取消原因',
+      '取消订单',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /.+/,
+        inputErrorMessage: '请输入取消原因'
+      }
+    )
+    
+    if (!userStore.userInfo?.id) {
+      ElMessage.error('用户信息获取失败，请重新登录')
+      return
+    }
+    
+    await cancelOrderApi(order.id, {
+      userId: userStore.userInfo.id,
+      reason: reason
+    })
+    ElMessage.success('订单已取消')
+    fetchOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消订单失败:', error)
+      ElMessage.error('取消订单失败')
+    }
+  }
+}
+
+// 确认收货
+const confirmReceipt = async (order) => {
+  try {
+    if (!userStore.userInfo?.id) {
+      ElMessage.error('用户信息获取失败，请重新登录')
+      return
+    }
+    
+    await ElMessageBox.confirm(
+      `确定已收到商品"${order.product?.title || '该商品'}"吗？`,
+      '确认收货',
+      {
+        confirmButtonText: '确认收货',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+    
+    await confirmReceiptApi(order.id, userStore.userInfo.id)
+    ElMessage.success('确认收货成功')
+    fetchOrders()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('确认收货失败:', error)
+      ElMessage.error('确认收货失败')
+    }
+  }
+}
+
+// 评价订单
+const reviewOrder = (order) => {
+  currentOrder.value = order
+  reviewForm.rating = 5
+  reviewForm.content = ''
+  reviewForm.images = []
+  reviewDialogVisible.value = true
+}
+
+// 提交评价
+const submitReview = async () => {
+  try {
+    if (!reviewForm.content.trim()) {
+      ElMessage.warning('请输入评价内容')
+      return
+    }
+    
+    await reviewOrderApi(currentOrder.value.id, {
+      rating: reviewForm.rating,
+      content: reviewForm.content,
+      images: reviewForm.images.map(file => file.url).filter(Boolean)
+    })
+    
+    ElMessage.success('评价成功')
+    reviewDialogVisible.value = false
+    fetchOrders()
+  } catch (error) {
+    console.error('评价失败:', error)
+    ElMessage.error('评价失败')
+  }
+}
+
+// 获取支付方式文本
+const getPaymentMethodText = (method) => {
+  const methodMap = {
+    'online': '在线支付',
+    'offline': '线下支付',
+    'cash': '现金支付'
+  }
+  return methodMap[method] || '未知'
+}
+
+// 获取交易方式文本
+const getTradeTypeText = (type) => {
+  const typeMap = {
+    1: '仅线下',
+    2: '仅线上', 
+    3: '线上线下均可'
+  }
+  return typeMap[type] || '未知'
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return '-'
+  return dayjs(time).format('YYYY-MM-DD HH:mm')
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const statusMap = {
+    pending: '待付款',
+    paid: '已付款',
+    shipped: '已发货',
+    completed: '已完成',
+    cancelled: '已取消',
+    refunded: '已退款'
+  }
+  return statusMap[status] || status
+}
+
+// 获取状态样式类
+const getStatusClass = (status) => {
+  return `status-${status}`
+}
+
+// 获取成色文本
+const getConditionText = (condition) => {
+  const conditionMap = {
+    new: '全新',
+    like_new: '几乎全新',
+    good: '良好',
+    fair: '一般',
+    poor: '较差'
+  }
+  return conditionMap[condition] || condition
+}
+
+// 初始化
+onMounted(() => {
+  fetchOrders()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -458,12 +596,6 @@ const payOrder = async (order) => {
 
 .filter-bar {
   margin-bottom: 24px;
-  
-  .el-tabs {
-    .el-tabs__header {
-      margin: 0;
-    }
-  }
 }
 
 .orders-container {
@@ -618,285 +750,10 @@ const payOrder = async (order) => {
   margin-top: 24px;
 }
 
-.order-detail-content {
-    .order-info-card,
-    .product-info-card {
-      margin-bottom: 16px;
-      
-      &:last-child {
-        margin-bottom: 0;
-      }
-      
-      .card-header {
-        font-weight: 600;
-        color: var(--text-primary);
-      }
-    }
-    
-    .order-info {
-      .info-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 12px;
-        
-        &:last-child {
-          margin-bottom: 0;
-        }
-        
-        .label {
-          font-weight: 500;
-          color: var(--text-secondary);
-          min-width: 80px;
-        }
-        
-        .value {
-          color: var(--text-primary);
-          
-          &.price {
-            font-weight: 600;
-            color: var(--danger-color);
-          }
-        }
-      }
-    }
-    
-    .product-detail,
-    .product-placeholder {
-      display: flex;
-      gap: 16px;
-      
-      .product-image,
-      .placeholder-image {
-        width: 120px;
-        height: 120px;
-        border-radius: 8px;
-        overflow: hidden;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--bg-secondary);
-        
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        
-        .el-icon {
-          font-size: 32px;
-          color: var(--text-secondary);
-        }
-      }
-      
-      .product-info {
-        flex: 1;
-        
-        h4 {
-          font-size: 16px;
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: var(--text-primary);
-        }
-        
-        .product-desc {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin-bottom: 12px;
-          line-height: 1.5;
-        }
-        
-        .product-meta {
-          .meta-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 6px;
-            
-            &:last-child {
-              margin-bottom: 0;
-            }
-            
-            .label {
-              font-size: 13px;
-              color: var(--text-secondary);
-              min-width: 70px;
-            }
-            
-            .value {
-              font-size: 13px;
-              color: var(--text-primary);
-              
-              &.price {
-                font-weight: 600;
-                color: var(--danger-color);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
+
 </style>
 
-<script>
-// 取消订单
-const cancelOrder = async (order) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要取消订单"${order.orderNo}"吗？`,
-      '确认取消',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    await cancelOrderApi(order.id)
-    ElMessage.success('订单已取消')
-    fetchOrders()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('取消订单失败:', error)
-      ElMessage.error('取消订单失败')
-    }
-  }
-}
 
-// 确认收货
-const confirmReceipt = async (order) => {
-  try {
-    if (!userStore.userInfo?.id) {
-      ElMessage.error('用户信息获取失败，请重新登录')
-      return
-    }
-    
-    await ElMessageBox.confirm(
-      `确定已收到商品"${order.product?.title || '该商品'}"吗？`,
-      '确认收货',
-      {
-        confirmButtonText: '确认收货',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
-    
-    await confirmReceiptApi(order.id, userStore.userInfo.id)
-    ElMessage.success('确认收货成功')
-    fetchOrders()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('确认收货失败:', error)
-      ElMessage.error('确认收货失败')
-    }
-  }
-}
-
-// 评价订单
-const reviewOrder = (order) => {
-  currentOrder.value = order
-  reviewForm.rating = 5
-  reviewForm.content = ''
-  reviewForm.images = []
-  reviewDialogVisible.value = true
-}
-
-// 提交评价
-const submitReview = async () => {
-  try {
-    if (!reviewForm.content.trim()) {
-      ElMessage.warning('请输入评价内容')
-      return
-    }
-    
-    await reviewOrderApi(currentOrder.value.id, {
-      rating: reviewForm.rating,
-      content: reviewForm.content,
-      images: reviewForm.images.map(file => file.url).filter(Boolean)
-    })
-    
-    ElMessage.success('评价成功')
-    reviewDialogVisible.value = false
-    fetchOrders()
-  } catch (error) {
-    console.error('评价失败:', error)
-    ElMessage.error('评价失败')
-  }
-}
-
-// 联系卖家
-const contactSeller = (order) => {
-  // 跳转到消息页面或打开聊天窗口
-  ElMessage.info('联系卖家功能开发中')
-}
-
-
-
-// 获取商品状态文本
-const getConditionText = (condition) => {
-  const conditionMap = {
-    1: '全新',
-    2: '几乎全新',
-    3: '轻微使用痕迹',
-    4: '明显使用痕迹',
-    5: '重度使用'
-  }
-  return conditionMap[condition] || '未知'
-}
-
-// 获取支付方式文本
-const getPaymentMethodText = (method) => {
-  const methodMap = {
-    'online': '在线支付',
-    'offline': '线下支付',
-    'cash': '现金支付'
-  }
-  return methodMap[method] || '未知'
-}
-
-// 获取交易方式文本
-const getTradeTypeText = (type) => {
-  const typeMap = {
-    1: '面交',
-    2: '邮寄',
-    3: '自提'
-  }
-  return typeMap[type] || '未知'
-}
-
-// 获取状态样式类
-const getStatusClass = (status) => {
-  const statusMap = {
-    pending: 'status-pending',
-    paid: 'status-paid',
-    completed: 'status-completed',
-    cancelled: 'status-cancelled'
-  }
-  return statusMap[status] || ''
-}
-
-// 获取状态文本
-const getStatusText = (status) => {
-  const statusMap = {
-    pending: '待付款',
-    paid: '已付款',
-    completed: '已完成',
-    cancelled: '已取消'
-  }
-  return statusMap[status] || '未知'
-}
-
-// 格式化时间
-const formatTime = (time) => {
-  return dayjs(time).format('YYYY-MM-DD HH:mm')
-}
-
-// 组件挂载
-onMounted(() => {
-  fetchOrders()
-})
-</script>
 
 <style lang="scss" scoped>
 .my-orders {
@@ -1140,7 +997,109 @@ onMounted(() => {
   }
 }
 
-// 响应式设计
+/* 订单详情对话框样式 */
+.order-detail-content {
+  .order-info-card,
+  .product-info-card {
+    margin-bottom: 16px;
+    
+    .card-header {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+  
+  .order-info {
+    .info-row {
+      display: flex;
+      margin-bottom: 12px;
+      
+      .label {
+        width: 100px;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+      
+      .value {
+        flex: 1;
+        color: var(--text-primary);
+        
+        &.price {
+          color: var(--danger-color);
+          font-weight: 600;
+        }
+      }
+    }
+  }
+  
+  .product-detail,
+  .product-placeholder {
+    display: flex;
+    gap: 16px;
+    
+    .product-image,
+    .placeholder-image {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      overflow: hidden;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    
+    .placeholder-image {
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 24px;
+    }
+    
+    .product-info {
+      flex: 1;
+      
+      h4 {
+        margin: 0 0 8px 0;
+        color: var(--text-primary);
+      }
+      
+      .product-desc {
+        color: var(--text-secondary);
+        margin: 0 0 12px 0;
+        font-size: 14px;
+      }
+      
+      .product-meta {
+        .meta-item {
+          display: flex;
+          margin-bottom: 6px;
+          
+          .label {
+            width: 80px;
+            color: var(--text-secondary);
+            font-size: 14px;
+          }
+          
+          .value {
+            color: var(--text-primary);
+            
+            &.price {
+              color: var(--danger-color);
+              font-weight: 600;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 响应式设计 */
 @include respond-to(md) {
   .my-orders {
     padding: 16px;
@@ -1221,6 +1180,20 @@ onMounted(() => {
             width: 100%;
           }
         }
+      }
+    }
+  }
+  
+  .order-detail-content {
+    .product-detail,
+    .product-placeholder {
+      flex-direction: column;
+      text-align: center;
+      
+      .product-image,
+      .placeholder-image {
+        align-self: center;
+        margin-bottom: 12px;
       }
     }
   }

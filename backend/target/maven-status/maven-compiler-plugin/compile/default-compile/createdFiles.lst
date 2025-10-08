@@ -11,6 +11,7 @@ com\campus\secondhand\dto\LoginRequest.class
 com\campus\secondhand\controller\ProductManageController$ForceDeleteProductRequest.class
 com\campus\secondhand\config\SecurityConfig.class
 com\campus\secondhand\controller\ProductManageController.class
+com\campus\secondhand\mapper\AnnouncementMapper.class
 com\campus\secondhand\service\AdminService$OrderStats.class
 com\campus\secondhand\service\UserManageService$UserDetail.class
 com\campus\secondhand\mapper\FavoriteMapper.class
@@ -47,6 +48,7 @@ com\campus\secondhand\service\impl\ProductManageServiceImpl.class
 com\campus\secondhand\service\impl\MessageServiceImpl.class
 com\campus\secondhand\mapper\AuditMapper.class
 com\campus\secondhand\controller\MessageController$SendMessageRequest.class
+com\campus\secondhand\controller\ProductController$StatusUpdateRequest.class
 com\campus\secondhand\controller\MessageController$MarkChatReadRequest.class
 com\campus\secondhand\dto\ResetPasswordRequest.class
 com\campus\secondhand\controller\ProductManageController$RemoveProductRequest.class
@@ -73,10 +75,14 @@ com\campus\secondhand\config\MybatisPlusConfig.class
 com\campus\secondhand\controller\UserController$ChangePasswordRequest.class
 com\campus\secondhand\dto\LoginResponse$UserInfo.class
 com\campus\secondhand\service\UserManageService.class
+com\campus\secondhand\controller\UserManageController$DeleteUserRequest.class
 com\campus\secondhand\service\AdminService$TransactionStats.class
 com\campus\secondhand\entity\School.class
+com\campus\secondhand\service\impl\AnnouncementServiceImpl.class
 com\campus\secondhand\dto\RegisterRequest.class
 com\campus\secondhand\controller\UserController$UserStats.class
+com\campus\secondhand\controller\PublicAnnouncementController.class
+com\campus\secondhand\entity\Announcement.class
 com\campus\secondhand\controller\ProductController.class
 com\campus\secondhand\service\AdminService$DashboardStats.class
 com\campus\secondhand\service\AuditService$AuditRecord.class
@@ -92,8 +98,10 @@ com\campus\secondhand\service\OrderService.class
 com\campus\secondhand\service\AuditService.class
 com\campus\secondhand\service\AuditService$AuditStats.class
 com\campus\secondhand\controller\OrderController$CancelOrderRequest.class
+com\campus\secondhand\controller\UserManageController$BatchDeleteUsersRequest.class
 com\campus\secondhand\CampusSecondhandApplication.class
 com\campus\secondhand\controller\SchoolController.class
+com\campus\secondhand\controller\AdminCategoryController.class
 com\campus\secondhand\service\SchoolService.class
 com\campus\secondhand\entity\Review.class
 com\campus\secondhand\service\AdminService$ProductStats.class
@@ -111,8 +119,10 @@ com\campus\secondhand\service\UserService.class
 com\campus\secondhand\filter\JwtAuthenticationFilter.class
 com\campus\secondhand\entity\Category.class
 com\campus\secondhand\entity\Message.class
+com\campus\secondhand\service\AnnouncementService.class
 com\campus\secondhand\common\Result.class
 com\campus\secondhand\service\impl\AuthServiceImpl.class
 com\campus\secondhand\service\MessageService$ChatListItem.class
 com\campus\secondhand\mapper\ProductManageMapper.class
+com\campus\secondhand\controller\AnnouncementController.class
 com\campus\secondhand\controller\UserManageController$UnbanUserRequest.class

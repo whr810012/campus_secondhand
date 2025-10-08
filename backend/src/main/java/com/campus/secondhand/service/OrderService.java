@@ -121,4 +121,13 @@ public interface OrderService {
      * @return 订单分页数据
      */
     Page<Order> getOrderListForAdmin(int page, int size, String status, String keyword);
+
+    /**
+     * 删除订单
+     *
+     * @param orderId 订单ID
+     * @param userId 用户ID
+     * @return 是否成功
+     */
+    boolean deleteOrder(Long orderId, Long userId);
 }

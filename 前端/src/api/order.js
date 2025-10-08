@@ -88,3 +88,11 @@ export const getAllOrders = (params = {}) => {
     params
   })
 }
+
+// 删除订单
+export const deleteOrder = (id) => {
+  return request({
+    url: `/orders/${id}`,
+    method: 'delete'
+  })
+}

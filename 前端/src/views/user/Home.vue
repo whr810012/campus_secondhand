@@ -1,20 +1,7 @@
 <template>
   <div class="home-page">
     <div class="container">
-      <!-- 轮播图 -->
-      <div class="banner-section">
-        <el-carousel height="300px" class="banner-carousel">
-          <el-carousel-item v-for="(banner, index) in banners" :key="index">
-            <div class="banner-item" :style="{ backgroundImage: `url(${banner.image})` }">
-              <div class="banner-content">
-                <h2>{{ banner.title }}</h2>
-                <p>{{ banner.description }}</p>
-                <el-button type="primary" size="large">{{ banner.buttonText }}</el-button>
-              </div>
-            </div>
-          </el-carousel-item>
-        </el-carousel>
-      </div>
+
       
       <!-- 管理员入口 -->
       <div v-if="userStore.isAdmin" class="admin-entrance">
@@ -33,57 +20,80 @@
           </div>
         </el-card>
       </div>
-      
-      <!-- 筛选和搜索 -->
-      <div class="filter-section">
-        <div class="filter-bar">
-          <div class="filter-left">
-            <el-select v-model="filters.categoryId" placeholder="选择分类" clearable @change="handleFilterChange">
-              <el-option label="全部分类" :value="null" />
-              <el-option
-                v-for="category in categories"
-                :key="category.id"
-                :label="category.name"
-                :value="category.id"
-              />
-            </el-select>
-            
-            <el-select v-model="filters.condition" placeholder="商品成色" clearable @change="handleFilterChange">
-              <el-option label="全部成色" :value="null" />
-              <el-option label="全新" :value="1" />
-              <el-option label="几乎全新" :value="2" />
-              <el-option label="轻微使用痕迹" :value="3" />
-              <el-option label="明显使用痕迹" :value="4" />
-              <el-option label="重度使用痕迹" :value="5" />
-            </el-select>
-            
-            <div class="price-filter">
-              <el-input
-                v-model="filters.minPrice"
-                placeholder="最低价格"
-                type="number"
-                @change="handleFilterChange"
-              />
-              <span class="price-separator">-</span>
-              <el-input
-                v-model="filters.maxPrice"
-                placeholder="最高价格"
-                type="number"
-                @change="handleFilterChange"
-              />
+
+      <!-- 公告展示区域 -->
+      <div v-if="announcements.length > 0" class="announcements-section">
+        <div class="section-header">
+          <h3>
+            <el-icon><Bell /></el-icon>
+            系统公告
+          </h3>
+          <div class="carousel-controls">
+          <span class="carousel-indicator">{{ currentSlide + 1 }} / {{ announcements.length }}</span>
+          <div class="carousel-nav">
+            <el-button 
+              :icon="ArrowLeft" 
+              size="small" 
+              circle 
+              @click="prevSlide"
+              :disabled="announcements.length <= 1"
+            />
+            <el-button 
+              :icon="ArrowRight" 
+              size="small" 
+              circle 
+              @click="nextSlide"
+              :disabled="announcements.length <= 1"
+            />
+          </div>
+        </div>
+        </div>
+        
+        <div class="announcements-carousel">
+          <div class="carousel-container" 
+               @mouseenter="stopAutoSlide" 
+               @mouseleave="startAutoSlide">
+            <div class="announcement-slide"
+                 v-for="(announcement, index) in announcements"
+                 :key="announcement.id"
+                 :class="{ 
+                   urgent: announcement.type === 'urgent',
+                   active: index === currentSlide 
+                 }"
+                 @click="showAnnouncementDetail(announcement)"
+            >
+              <div class="announcement-header">
+                <div class="announcement-title">
+                  <el-icon v-if="announcement.type === 'urgent'" class="urgent-icon"><Warning /></el-icon>
+                  <span>{{ announcement.title }}</span>
+                  <el-tag :type="getAnnouncementTypeTag(announcement.type)" size="small">
+                    {{ getAnnouncementTypeLabel(announcement.type) }}
+                  </el-tag>
+                </div>
+                <div class="announcement-time">
+                  {{ formatDate(announcement.publishTime || announcement.createdAt) }}
+                </div>
+              </div>
+              <div class="announcement-content">
+                {{ announcement.content }}
+              </div>
             </div>
           </div>
           
-          <div class="filter-right">
-            <el-select v-model="filters.sortBy" @change="handleFilterChange">
-              <el-option label="最新发布" value="latest" />
-              <el-option label="价格从低到高" value="price_asc" />
-              <el-option label="价格从高到低" value="price_desc" />
-              <el-option label="浏览量最多" value="view_count" />
-            </el-select>
+          <!-- 轮播指示器 -->
+          <div v-if="announcements.length > 1" class="carousel-dots">
+            <span
+              v-for="(announcement, index) in announcements"
+              :key="`dot-${announcement.id}`"
+              class="dot"
+              :class="{ active: index === currentSlide }"
+              @click="goToSlide(index)"
+            ></span>
           </div>
         </div>
       </div>
+      
+
       
       <!-- 商品列表 -->
       <div class="products-section">
@@ -153,55 +163,57 @@
         </div>
       </div>
     </div>
+
+    <!-- 公告详情对话框 -->
+    <el-dialog
+      v-model="showAnnouncementDialog"
+      title="公告详情"
+      width="600px"
+    >
+      <div v-if="selectedAnnouncement" class="announcement-detail">
+        <div class="detail-header">
+          <h2 class="detail-title">{{ selectedAnnouncement.title }}</h2>
+          <div class="detail-meta">
+            <el-tag :type="getAnnouncementTypeTag(selectedAnnouncement.type)" size="small">
+              {{ getAnnouncementTypeLabel(selectedAnnouncement.type) }}
+            </el-tag>
+            <span class="detail-time">
+              {{ formatDate(selectedAnnouncement.publishTime || selectedAnnouncement.createdAt) }}
+            </span>
+          </div>
+        </div>
+        <div class="detail-content">
+          {{ selectedAnnouncement.content }}
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { getProducts, getCategories } from '@/api/product'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElDialog } from 'element-plus'
+import { Setting, View, Star, Box, Bell, Warning, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { getCategories, getProducts } from '@/api/product'
+import { getPublishedAnnouncements, getPublishedAnnouncementById } from '@/api/announcement'
 import { useUserStore } from '@/stores/user'
-import { Setting, View, Star, Box } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
 const products = ref([])
 const categories = ref([])
+const announcements = ref([])
+const showAnnouncementDialog = ref(false)
+const selectedAnnouncement = ref(null)
+const currentAnnouncementIndex = ref(0)
+const autoPlayTimer = ref(null)
+const currentSlide = ref(0)
+const slideInterval = ref(null)
 
-// 轮播图数据
-const banners = ref([
-  {
-    title: '欢迎来到校园二手交易平台',
-    description: '安全、便捷的校园二手商品交易服务',
-    buttonText: '立即体验',
-    image: 'https://via.placeholder.com/1200x300/409eff/ffffff?text=校园二手交易平台'
-  },
-  {
-    title: '学生身份认证',
-    description: '确保平台用户均为在校学生，交易更安全',
-    buttonText: '了解更多',
-    image: 'https://via.placeholder.com/1200x300/67c23a/ffffff?text=学生身份认证'
-  },
-  {
-    title: '信誉评价体系',
-    description: '完善的评价系统，让每一次交易都有保障',
-    buttonText: '查看详情',
-    image: 'https://via.placeholder.com/1200x300/e6a23c/ffffff?text=信誉评价体系'
-  }
-])
 
-// 筛选条件
-const filters = reactive({
-  keyword: '',
-  categoryId: null,
-  condition: null,
-  minPrice: '',
-  maxPrice: '',
-  sortBy: 'latest'
-})
 
 // 分页信息
 const pagination = reactive({
@@ -216,16 +228,8 @@ const fetchProducts = async () => {
   try {
     const params = {
       page: pagination.page,
-      size: pagination.size,
-      ...filters
+      size: pagination.size
     }
-    
-    // 清除空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
     
     const response = await getProducts(params)
     products.value = response.data.records || []
@@ -247,6 +251,63 @@ const fetchCategories = async () => {
   }
 }
 
+// 获取公告列表
+const fetchAnnouncements = async () => {
+  try {
+    const response = await getPublishedAnnouncements({
+      current: 1,
+      size: 5
+    })
+    if (response.code === 200) {
+      announcements.value = response.data.records || []
+      // 如果有公告数据，启动自动轮播
+      if (announcements.value.length > 1) {
+        startAutoSlide()
+      }
+    }
+  } catch (error) {
+    console.error('获取公告列表失败:', error)
+  }
+}
+
+// 轮播图控制方法
+const nextSlide = () => {
+  if (announcements.value.length > 0) {
+    currentSlide.value = (currentSlide.value + 1) % announcements.value.length
+  }
+}
+
+const prevSlide = () => {
+  if (announcements.value.length > 0) {
+    currentSlide.value = currentSlide.value === 0 
+      ? announcements.value.length - 1 
+      : currentSlide.value - 1
+  }
+}
+
+const goToSlide = (index) => {
+  currentSlide.value = index
+  // 重新启动自动轮播
+  stopAutoSlide()
+  startAutoSlide()
+}
+
+// 自动轮播控制
+const startAutoSlide = () => {
+  if (announcements.value.length > 1) {
+    slideInterval.value = setInterval(() => {
+      nextSlide()
+    }, 4000) // 每4秒切换一次
+  }
+}
+
+const stopAutoSlide = () => {
+  if (slideInterval.value) {
+    clearInterval(slideInterval.value)
+    slideInterval.value = null
+  }
+}
+
 // 获取商品图片
 const getProductImage = (images) => {
   if (images && images.length > 0) {
@@ -265,10 +326,76 @@ const goToAdmin = () => {
   router.push('/admin/dashboard')
 }
 
-// 处理筛选条件变化
-const handleFilterChange = () => {
-  pagination.page = 1
-  fetchProducts()
+// 显示公告详情
+const showAnnouncementDetail = (announcement) => {
+  selectedAnnouncement.value = announcement
+  showAnnouncementDialog.value = true
+}
+
+// 获取公告类型标签
+const getAnnouncementTypeTag = (type) => {
+  const types = {
+    normal: 'info',
+    important: 'warning',
+    urgent: 'danger'
+  }
+  return types[type] || 'info'
+}
+
+// 获取公告类型标签文本
+const getAnnouncementTypeLabel = (type) => {
+  const labels = {
+    normal: '普通',
+    important: '重要',
+    urgent: '紧急'
+  }
+  return labels[type] || type
+}
+
+// 格式化日期
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString('zh-CN')
+}
+
+// 轮播图控制函数
+const nextAnnouncement = () => {
+  if (announcements.value.length > 1) {
+    currentAnnouncementIndex.value = (currentAnnouncementIndex.value + 1) % announcements.value.length
+  }
+}
+
+const prevAnnouncement = () => {
+  if (announcements.value.length > 1) {
+    currentAnnouncementIndex.value = currentAnnouncementIndex.value === 0 
+      ? announcements.value.length - 1 
+      : currentAnnouncementIndex.value - 1
+  }
+}
+
+const goToAnnouncement = (index) => {
+  currentAnnouncementIndex.value = index
+  resetAutoPlay()
+}
+
+// 自动播放控制
+const startAutoPlay = () => {
+  if (announcements.value.length > 1) {
+    autoPlayTimer.value = setInterval(() => {
+      nextAnnouncement()
+    }, 5000) // 5秒自动切换
+  }
+}
+
+const stopAutoPlay = () => {
+  if (autoPlayTimer.value) {
+    clearInterval(autoPlayTimer.value)
+    autoPlayTimer.value = null
+  }
+}
+
+const resetAutoPlay = () => {
+  stopAutoPlay()
+  startAutoPlay()
 }
 
 // 处理页码变化
@@ -284,86 +411,26 @@ const handleSizeChange = (size) => {
   fetchProducts()
 }
 
-// 监听路由查询参数变化
-watch(
-  () => route.query,
-  (newQuery) => {
-    if (newQuery.keyword) {
-      filters.keyword = newQuery.keyword
-    }
-    if (newQuery.categoryId) {
-      filters.categoryId = parseInt(newQuery.categoryId)
-    }
-    fetchProducts()
-  },
-  { immediate: true }
-)
-
 // 初始化
 onMounted(async () => {
   await fetchCategories()
-  
-  // 从路由参数中获取初始筛选条件
-  if (route.query.keyword) {
-    filters.keyword = route.query.keyword
-  }
-  if (route.query.categoryId) {
-    filters.categoryId = parseInt(route.query.categoryId)
-  }
-  
+  await fetchAnnouncements()
   await fetchProducts()
+  
+  // 启动自动播放
+  startAutoPlay()
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  stopAutoPlay()
+  stopAutoSlide()
 })
 </script>
 
 <style lang="scss" scoped>
 .home-page {
-  .banner-section {
-    margin-bottom: 30px;
-    
-    .banner-carousel {
-      border-radius: 12px;
-      overflow: hidden;
-      
-      .banner-item {
-        height: 100%;
-        background-size: cover;
-        background-position: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        
-        &::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.3);
-        }
-        
-        .banner-content {
-          text-align: center;
-          color: white;
-          position: relative;
-          z-index: 1;
-          
-          h2 {
-            font-size: 32px;
-            margin-bottom: 16px;
-            font-weight: 600;
-          }
-          
-          p {
-            font-size: 18px;
-            margin-bottom: 24px;
-            opacity: 0.9;
-          }
-        }
-      }
-    }
-  }
+
   
   .admin-entrance {
     margin: 20px 0;
@@ -426,46 +493,207 @@ onMounted(async () => {
     }
   }
   
-  .filter-section {
-    margin-bottom: 30px;
+  // 公告轮播图样式
+  .announcements-section {
+    margin: 20px 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
     
-    .filter-bar {
+    .section-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 16px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       
-      .filter-left {
+      h3 {
+        margin: 0;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 8px;
         
-        .price-filter {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+        .el-icon {
+          font-size: 18px;
+        }
+      }
+      
+      .carousel-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        
+        .el-button {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
           
-          .el-input {
-            width: 120px;
+          &:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
           }
           
-          .price-separator {
-            color: var(--text-secondary);
+          &:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+          }
+        }
+        
+        .carousel-indicator {
+          color: white;
+          font-size: 12px;
+          font-weight: 500;
+          min-width: 40px;
+          text-align: center;
+        }
+      }
+    }
+    
+    .announcements-carousel {
+      position: relative;
+      overflow: hidden;
+      
+      .carousel-container {
+        position: relative;
+        width: 100%;
+        min-height: 120px; /* 设置最小高度确保容器有空间 */
+        
+        .announcement-slide {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          padding: 20px;
+          cursor: pointer;
+          transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          opacity: 0;
+          visibility: hidden;
+          box-sizing: border-box;
+          
+          &.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 1;
+          }
+          
+          &:hover {
+            background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+            
+            &::before {
+              opacity: 1;
+            }
+          }
+          
+          &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+          }
+          
+          // 紧急公告特殊样式
+          &.urgent {
+            background: linear-gradient(90deg, #fef0f0 0%, #ffffff 100%);
+            
+            &::before {
+              background: #f56c6c;
+              opacity: 1;
+            }
+            
+            &:hover {
+              background: linear-gradient(90deg, #fde2e2 0%, #ffffff 100%);
+            }
+            
+            .urgent-icon {
+              color: #f56c6c;
+              animation: pulse 2s infinite;
+            }
+          }
+          
+          .announcement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 12px;
+            
+            .announcement-title {
+              flex: 1;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              
+              span {
+                font-size: 16px;
+                font-weight: 600;
+                color: #303133;
+                line-height: 1.4;
+              }
+              
+              .el-tag {
+                flex-shrink: 0;
+              }
+            }
+            
+            .announcement-time {
+              font-size: 12px;
+              color: #909399;
+              white-space: nowrap;
+              flex-shrink: 0;
+            }
+          }
+          
+          .announcement-content {
+            font-size: 14px;
+            color: #606266;
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
         }
       }
       
-      .filter-right {
-        .el-select {
-          width: 150px;
+      .carousel-dots {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        padding: 16px 20px 20px;
+        
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #dcdfe6;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          
+          &:hover {
+            background: #c0c4cc;
+            transform: scale(1.2);
+          }
+          
+          &.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scale(1.3);
+          }
         }
       }
     }
   }
-  
+
   .products-section {
     .section-header {
       display: flex;
@@ -631,34 +859,6 @@ onMounted(async () => {
 // 响应式设计
 @media (max-width: 768px) {
   .home-page {
-    .banner-section {
-      .banner-carousel {
-        height: 200px;
-        
-        .banner-content {
-          h2 {
-            font-size: 24px;
-          }
-          
-          p {
-            font-size: 16px;
-          }
-        }
-      }
-    }
-    
-    .filter-section {
-      .filter-bar {
-        flex-direction: column;
-        gap: 16px;
-        
-        .filter-left {
-          flex-wrap: wrap;
-          justify-content: center;
-        }
-      }
-    }
-    
     .products-section {
       .products-grid {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -678,3 +878,122 @@ onMounted(async () => {
   }
 }
 </style>
+
+
+
+/* 公告详情对话框样式 */
+.announcement-detail {
+  padding: 10px 0;
+}
+
+.detail-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.detail-title {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-time {
+  font-size: 13px;
+  color: #909399;
+}
+
+.detail-content {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #606266;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .announcements-section {
+    margin: 16px 0;
+    border-radius: 8px;
+    
+    .section-header {
+      padding: 12px 16px;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+      
+      h3 {
+        font-size: 15px;
+      }
+      
+      .carousel-controls {
+        align-self: flex-end;
+        gap: 8px;
+        
+        .carousel-indicator {
+          font-size: 11px;
+          min-width: 35px;
+        }
+      }
+    }
+    
+    .announcements-carousel {
+      .carousel-container {
+        .announcement-slide {
+          padding: 16px;
+          
+          .announcement-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            
+            .announcement-title {
+              span {
+                font-size: 14px;
+              }
+            }
+            
+            .announcement-time {
+              align-self: flex-end;
+            }
+          }
+          
+          .announcement-content {
+            font-size: 13px;
+            -webkit-line-clamp: 2;
+          }
+        }
+      }
+      
+      .carousel-dots {
+        padding: 12px 16px 16px;
+        
+        .dot {
+          width: 6px;
+          height: 6px;
+        }
+      }
+    }
+  }
+}

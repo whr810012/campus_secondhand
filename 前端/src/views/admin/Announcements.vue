@@ -14,89 +14,9 @@
       </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <div class="stat-card">
-        <div class="stat-icon primary">
-          <el-icon><Bell /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-number">{{ stats.totalAnnouncements }}</div>
-          <div class="stat-label">总公告数</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon success">
-          <el-icon><Check /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-number">{{ stats.publishedAnnouncements }}</div>
-          <div class="stat-label">已发布</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon warning">
-          <el-icon><Clock /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-number">{{ stats.draftAnnouncements }}</div>
-          <div class="stat-label">草稿</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon info">
-          <el-icon><View /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-number">{{ stats.totalViews }}</div>
-          <div class="stat-label">总浏览量</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- 筛选和搜索 -->
-    <div class="filter-section">
-      <div class="filter-left">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索公告标题或内容..."
-          clearable
-          @input="handleSearch"
-          style="width: 300px;"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-select v-model="statusFilter" placeholder="状态筛选" clearable style="width: 120px;">
-          <el-option label="全部" value="" />
-          <el-option label="已发布" value="published" />
-          <el-option label="草稿" value="draft" />
-          <el-option label="已下线" value="offline" />
-        </el-select>
-        <el-select v-model="typeFilter" placeholder="类型筛选" clearable style="width: 120px;">
-          <el-option label="全部" value="" />
-          <el-option label="系统公告" value="system" />
-          <el-option label="活动公告" value="activity" />
-          <el-option label="维护公告" value="maintenance" />
-          <el-option label="紧急公告" value="urgent" />
-        </el-select>
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          format="YYYY-MM-DD"
-          value-format="YYYY-MM-DD"
-          style="width: 240px;"
-        />
-      </div>
-      <div class="filter-right">
-        <el-button @click="resetFilters">重置筛选</el-button>
-        <el-button type="primary" @click="exportAnnouncements">导出数据</el-button>
-      </div>
-    </div>
+
+
 
     <!-- 批量操作 -->
     <div class="batch-actions" v-if="selectedAnnouncements.length > 0">
@@ -118,7 +38,7 @@
           <template #default="{ row }">
             <div class="announcement-title">
               <el-icon v-if="row.type === 'urgent'" class="urgent-icon"><Warning /></el-icon>
-              <span class="title-text" @click="previewAnnouncement(row)">{{ row.title }}</span>
+              <span class="title-text" @click="showPreview(row)">{{ row.title }}</span>
               <el-tag v-if="row.isTop" type="danger" size="small">置顶</el-tag>
             </div>
           </template>
@@ -138,11 +58,6 @@
           </template>
         </el-table-column>
         <el-table-column prop="author" label="发布者" width="120" />
-        <el-table-column prop="viewCount" label="浏览量" width="100">
-          <template #default="{ row }">
-            <span class="view-count">{{ row.viewCount || 0 }}</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="publishTime" label="发布时间" width="180">
           <template #default="{ row }">
             {{ row.publishTime ? formatDate(row.publishTime) : '-' }}
@@ -153,16 +68,13 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="editAnnouncement(row)">
-              编辑
-            </el-button>
             <el-button 
               v-if="row.status === 'draft'" 
               type="success" 
               size="small" 
-              @click="publishAnnouncement(row)"
+              @click="handlePublishAnnouncement(row)"
             >
               发布
             </el-button>
@@ -170,18 +82,11 @@
               v-if="row.status === 'published'" 
               type="warning" 
               size="small" 
-              @click="offlineAnnouncement(row)"
+              @click="handleOfflineAnnouncement(row)"
             >
               下线
             </el-button>
-            <el-button 
-              type="info" 
-              size="small" 
-              @click="toggleTop(row)"
-            >
-              {{ row.isTop ? '取消置顶' : '置顶' }}
-            </el-button>
-            <el-button type="danger" size="small" @click="deleteAnnouncement(row)">
+            <el-button type="danger" size="small" @click="handleDeleteAnnouncement(row)">
               删除
             </el-button>
           </template>
@@ -220,10 +125,9 @@
         </el-form-item>
         <el-form-item label="公告类型" prop="type">
           <el-select v-model="announcementForm.type" placeholder="请选择公告类型" style="width: 100%;">
-            <el-option label="系统公告" value="system" />
-            <el-option label="活动公告" value="activity" />
-            <el-option label="维护公告" value="maintenance" />
-            <el-option label="紧急公告" value="urgent" />
+            <el-option label="普通" value="normal" />
+            <el-option label="重要" value="important" />
+            <el-option label="紧急" value="urgent" />
           </el-select>
         </el-form-item>
         <el-form-item label="公告内容" prop="content">
@@ -243,10 +147,6 @@
             value-format="YYYY-MM-DD HH:mm:ss"
             style="width: 100%;"
           />
-        </el-form-item>
-        <el-form-item label="设置">
-          <el-checkbox v-model="announcementForm.isTop">置顶显示</el-checkbox>
-          <el-checkbox v-model="announcementForm.sendNotification">发送通知</el-checkbox>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -288,21 +188,26 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus,
-  Search,
-  Bell,
-  Check,
-  Clock,
-  View,
   Warning
 } from '@element-plus/icons-vue'
+import {
+  getAnnouncementPage,
+  getAnnouncementById,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  batchDeleteAnnouncements,
+  publishAnnouncement,
+  offlineAnnouncement,
+  batchPublishAnnouncements,
+  batchOfflineAnnouncements,
+  incrementViewCount,
+  getAnnouncementStats
+} from '@/api/announcement'
 
 // 响应式数据
 const loading = ref(false)
 const saving = ref(false)
-const searchQuery = ref('')
-const statusFilter = ref('')
-const typeFilter = ref('')
-const dateRange = ref([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalAnnouncements = ref(0)
@@ -313,87 +218,13 @@ const editingAnnouncement = ref(null)
 const previewAnnouncementData = ref(null)
 const announcementFormRef = ref(null)
 
-// 统计数据
-const stats = reactive({
-  totalAnnouncements: 45,
-  publishedAnnouncements: 32,
-  draftAnnouncements: 13,
-  totalViews: 15420
-})
-
 // 公告数据
-const announcements = ref([
-  {
-    id: 1,
-    title: '校园二手交易平台正式上线',
-    type: 'system',
-    status: 'published',
-    content: '欢迎使用校园二手交易平台！我们致力于为同学们提供安全、便捷的二手物品交易服务。',
-    author: '系统管理员',
-    viewCount: 1256,
-    isTop: true,
-    sendNotification: true,
-    publishTime: '2024-01-15 10:00:00',
-    createdAt: '2024-01-15 09:30:00'
-  },
-  {
-    id: 2,
-    title: '春节期间服务调整通知',
-    type: 'maintenance',
-    status: 'published',
-    content: '春节期间（2月10日-2月17日），平台客服服务时间调整为每日9:00-18:00，请同学们合理安排交易时间。',
-    author: '运营团队',
-    viewCount: 892,
-    isTop: false,
-    sendNotification: true,
-    publishTime: '2024-02-05 14:30:00',
-    createdAt: '2024-02-05 14:00:00'
-  },
-  {
-    id: 3,
-    title: '新学期开学季活动预告',
-    type: 'activity',
-    status: 'draft',
-    content: '新学期开学季即将到来，我们将推出一系列优惠活动，敬请期待！',
-    author: '活动策划',
-    viewCount: 0,
-    isTop: false,
-    sendNotification: false,
-    publishTime: null,
-    createdAt: '2024-02-20 16:45:00'
-  },
-  {
-    id: 4,
-    title: '紧急：发现虚假商品信息处理公告',
-    type: 'urgent',
-    status: 'published',
-    content: '近期发现部分用户发布虚假商品信息，平台已采取相应措施。请同学们提高警惕，如发现可疑信息请及时举报。',
-    author: '安全团队',
-    viewCount: 2341,
-    isTop: true,
-    sendNotification: true,
-    publishTime: '2024-02-18 09:15:00',
-    createdAt: '2024-02-18 09:00:00'
-  },
-  {
-    id: 5,
-    title: '系统维护升级通知',
-    type: 'maintenance',
-    status: 'offline',
-    content: '为提升用户体验，系统将于本周末进行维护升级，届时可能影响部分功能使用。',
-    author: '技术团队',
-    viewCount: 567,
-    isTop: false,
-    sendNotification: false,
-    publishTime: '2024-02-10 20:00:00',
-    createdAt: '2024-02-10 19:30:00'
-  }
-])
+const announcements = ref([])
 
 // 公告表单
 const announcementForm = reactive({
   title: '',
-  type: 'system',
+  type: 'normal',
   content: '',
   publishTime: null,
   isTop: false,
@@ -415,60 +246,36 @@ const announcementRules = {
   ]
 }
 
-// 计算属性
+// 计算属性 - 直接返回所有公告数据
 const filteredAnnouncements = computed(() => {
-  let result = announcements.value
-  
-  if (searchQuery.value) {
-    result = result.filter(item => 
-      item.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-  }
-  
-  if (statusFilter.value) {
-    result = result.filter(item => item.status === statusFilter.value)
-  }
-  
-  if (typeFilter.value) {
-    result = result.filter(item => item.type === typeFilter.value)
-  }
-  
-  if (dateRange.value && dateRange.value.length === 2) {
-    result = result.filter(item => {
-      const itemDate = new Date(item.createdAt).toISOString().split('T')[0]
-      return itemDate >= dateRange.value[0] && itemDate <= dateRange.value[1]
-    })
-  }
-  
-  return result
+  return announcements.value
 })
 
 // 方法
 const fetchAnnouncements = async () => {
   loading.value = true
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    totalAnnouncements.value = announcements.value.length
+    const params = {
+      current: currentPage.value,
+      size: pageSize.value
+    }
+    
+    const response = await getAnnouncementPage(params)
+    if (response.code === 200) {
+      announcements.value = response.data.records || []
+      totalAnnouncements.value = response.data.total || 0
+    } else {
+      ElMessage.error(response.message || '获取公告数据失败')
+    }
   } catch (error) {
+    console.error('获取公告数据失败:', error)
     ElMessage.error('获取公告数据失败')
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => {
-  currentPage.value = 1
-}
 
-const resetFilters = () => {
-  searchQuery.value = ''
-  statusFilter.value = ''
-  typeFilter.value = ''
-  dateRange.value = []
-  currentPage.value = 1
-}
 
 const handleSelectionChange = (selection) => {
   selectedAnnouncements.value = selection
@@ -484,10 +291,14 @@ const handleCurrentChange = (page) => {
   fetchAnnouncements()
 }
 
-const previewAnnouncement = (announcement) => {
+const showPreview = (announcement) => {
   previewAnnouncementData.value = announcement
   showPreviewDialog.value = true
 }
+
+const previewAnnouncement = computed(() => {
+  return previewAnnouncementData.value
+})
 
 const editAnnouncement = (announcement) => {
   editingAnnouncement.value = announcement
@@ -502,7 +313,7 @@ const editAnnouncement = (announcement) => {
   showAddDialog.value = true
 }
 
-const publishAnnouncement = async (announcement) => {
+const handlePublishAnnouncement = async (announcement) => {
   try {
     await ElMessageBox.confirm(
       `确定要发布公告 "${announcement.title}" 吗？`,
@@ -510,21 +321,22 @@ const publishAnnouncement = async (announcement) => {
       { type: 'info' }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    announcement.status = 'published'
-    announcement.publishTime = new Date().toISOString().replace('T', ' ').substring(0, 19)
-    
-    ElMessage.success('公告发布成功')
+    const response = await publishAnnouncement(announcement.id)
+    if (response.code === 200) {
+      ElMessage.success('公告发布成功')
+      fetchAnnouncements() // 重新获取数据
+    } else {
+      ElMessage.error(response.message || '发布失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('发布失败:', error)
       ElMessage.error('发布失败')
     }
   }
 }
 
-const offlineAnnouncement = async (announcement) => {
+const handleOfflineAnnouncement = async (announcement) => {
   try {
     await ElMessageBox.confirm(
       `确定要下线公告 "${announcement.title}" 吗？`,
@@ -532,14 +344,16 @@ const offlineAnnouncement = async (announcement) => {
       { type: 'warning' }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    announcement.status = 'offline'
-    
-    ElMessage.success('公告已下线')
+    const response = await offlineAnnouncement(announcement.id)
+    if (response.code === 200) {
+      ElMessage.success('公告已下线')
+      fetchAnnouncements() // 重新获取数据
+    } else {
+      ElMessage.error(response.message || '下线失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('下线失败:', error)
       ElMessage.error('下线失败')
     }
   }
@@ -567,7 +381,7 @@ const toggleTop = async (announcement) => {
   }
 }
 
-const deleteAnnouncement = async (announcement) => {
+const handleDeleteAnnouncement = async (announcement) => {
   try {
     await ElMessageBox.confirm(
       `确定要删除公告 "${announcement.title}" 吗？此操作不可恢复。`,
@@ -579,18 +393,16 @@ const deleteAnnouncement = async (announcement) => {
       }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const index = announcements.value.findIndex(item => item.id === announcement.id)
-    if (index > -1) {
-      announcements.value.splice(index, 1)
+    const response = await deleteAnnouncement(announcement.id)
+    if (response.code === 200) {
+      ElMessage.success('公告删除成功')
+      fetchAnnouncements() // 重新获取数据
+    } else {
+      ElMessage.error(response.message || '删除失败')
     }
-    
-    ElMessage.success('公告删除成功')
-    fetchAnnouncements()
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('删除失败:', error)
       ElMessage.error('删除失败')
     }
   }
@@ -601,29 +413,31 @@ const saveDraft = async () => {
     await announcementFormRef.value.validate()
     saving.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    if (editingAnnouncement.value) {
-      Object.assign(editingAnnouncement.value, announcementForm)
-      ElMessage.success('草稿保存成功')
-    } else {
-      const newAnnouncement = {
-        id: Date.now(),
-        ...announcementForm,
-        status: 'draft',
-        author: '当前用户',
-        viewCount: 0,
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
-      }
-      announcements.value.unshift(newAnnouncement)
-      ElMessage.success('草稿保存成功')
+    const announcementData = {
+      title: announcementForm.title,
+      type: announcementForm.type,
+      content: announcementForm.content,
+      publishTime: announcementForm.publishTime,
+      status: 0 // 草稿状态
     }
     
-    showAddDialog.value = false
-    fetchAnnouncements()
+    let response
+    if (editingAnnouncement.value) {
+      response = await updateAnnouncement(editingAnnouncement.value.id, announcementData)
+    } else {
+      response = await createAnnouncement(announcementData)
+    }
+    
+    if (response.code === 200) {
+      ElMessage.success('草稿保存成功')
+      showAddDialog.value = false
+      fetchAnnouncements()
+    } else {
+      ElMessage.error(response.message || '保存失败')
+    }
   } catch (error) {
     console.error('保存失败:', error)
+    ElMessage.error('保存失败')
   } finally {
     saving.value = false
   }
@@ -634,36 +448,31 @@ const saveAndPublish = async () => {
     await announcementFormRef.value.validate()
     saving.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const publishTime = announcementForm.publishTime || new Date().toISOString().replace('T', ' ').substring(0, 19)
-    
-    if (editingAnnouncement.value) {
-      Object.assign(editingAnnouncement.value, {
-        ...announcementForm,
-        status: 'published',
-        publishTime
-      })
-      ElMessage.success('公告更新并发布成功')
-    } else {
-      const newAnnouncement = {
-        id: Date.now(),
-        ...announcementForm,
-        status: 'published',
-        author: '当前用户',
-        viewCount: 0,
-        publishTime,
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
-      }
-      announcements.value.unshift(newAnnouncement)
-      ElMessage.success('公告发布成功')
+    const announcementData = {
+      title: announcementForm.title,
+      type: announcementForm.type,
+      content: announcementForm.content,
+      publishTime: announcementForm.publishTime,
+      status: 1 // 发布状态
     }
     
-    showAddDialog.value = false
-    fetchAnnouncements()
+    let response
+    if (editingAnnouncement.value) {
+      response = await updateAnnouncement(editingAnnouncement.value.id, announcementData)
+    } else {
+      response = await createAnnouncement(announcementData)
+    }
+    
+    if (response.code === 200) {
+      ElMessage.success(editingAnnouncement.value ? '公告更新并发布成功' : '公告发布成功')
+      showAddDialog.value = false
+      fetchAnnouncements()
+    } else {
+      ElMessage.error(response.message || '发布失败')
+    }
   } catch (error) {
     console.error('发布失败:', error)
+    ElMessage.error('发布失败')
   } finally {
     saving.value = false
   }
@@ -673,7 +482,7 @@ const resetForm = () => {
   editingAnnouncement.value = null
   Object.assign(announcementForm, {
     title: '',
-    type: 'system',
+    type: 'normal',
     content: '',
     publishTime: null,
     isTop: false,
@@ -690,19 +499,19 @@ const batchPublish = async () => {
       { type: 'info' }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const ids = selectedAnnouncements.value.map(item => item.id)
+    const response = await batchPublishAnnouncements(ids)
     
-    const publishTime = new Date().toISOString().replace('T', ' ').substring(0, 19)
-    selectedAnnouncements.value.forEach(announcement => {
-      announcement.status = 'published'
-      announcement.publishTime = publishTime
-    })
-    
-    ElMessage.success('批量发布成功')
-    selectedAnnouncements.value = []
+    if (response.code === 200) {
+      ElMessage.success('批量发布成功')
+      selectedAnnouncements.value = []
+      fetchAnnouncements()
+    } else {
+      ElMessage.error(response.message || '批量发布失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('批量发布失败:', error)
       ElMessage.error('批量发布失败')
     }
   }
@@ -716,17 +525,19 @@ const batchOffline = async () => {
       { type: 'warning' }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const ids = selectedAnnouncements.value.map(item => item.id)
+    const response = await batchOfflineAnnouncements(ids)
     
-    selectedAnnouncements.value.forEach(announcement => {
-      announcement.status = 'offline'
-    })
-    
-    ElMessage.success('批量下线成功')
-    selectedAnnouncements.value = []
+    if (response.code === 200) {
+      ElMessage.success('批量下线成功')
+      selectedAnnouncements.value = []
+      fetchAnnouncements()
+    } else {
+      ElMessage.error(response.message || '批量下线失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('批量下线失败:', error)
       ElMessage.error('批量下线失败')
     }
   }
@@ -740,21 +551,19 @@ const batchDelete = async () => {
       { type: 'error' }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const ids = selectedAnnouncements.value.map(item => item.id)
+    const response = await batchDeleteAnnouncements(ids)
     
-    selectedAnnouncements.value.forEach(announcement => {
-      const index = announcements.value.findIndex(item => item.id === announcement.id)
-      if (index > -1) {
-        announcements.value.splice(index, 1)
-      }
-    })
-    
-    ElMessage.success('批量删除成功')
-    selectedAnnouncements.value = []
-    fetchAnnouncements()
+    if (response.code === 200) {
+      ElMessage.success('批量删除成功')
+      selectedAnnouncements.value = []
+      fetchAnnouncements()
+    } else {
+      ElMessage.error(response.message || '批量删除失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
       ElMessage.error('批量删除失败')
     }
   }
@@ -772,9 +581,8 @@ const formatDate = (dateString) => {
 
 const getTypeTagType = (type) => {
   const types = {
-    system: 'primary',
-    activity: 'success',
-    maintenance: 'warning',
+    normal: 'info',
+    important: 'warning',
     urgent: 'danger'
   }
   return types[type] || 'info'
@@ -782,10 +590,9 @@ const getTypeTagType = (type) => {
 
 const getTypeLabel = (type) => {
   const labels = {
-    system: '系统公告',
-    activity: '活动公告',
-    maintenance: '维护公告',
-    urgent: '紧急公告'
+    normal: '普通',
+    important: '重要',
+    urgent: '紧急'
   }
   return labels[type] || type
 }
@@ -846,94 +653,9 @@ onMounted(() => {
     }
   }
 
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 20px;
 
-    .stat-card {
-      display: flex;
-      align-items: center;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s;
 
-      &:hover {
-        transform: translateY(-2px);
-      }
 
-      .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 16px;
-        font-size: 24px;
-
-        &.primary {
-          background: #e3f2fd;
-          color: #1976d2;
-        }
-
-        &.success {
-          background: #e8f5e8;
-          color: #4caf50;
-        }
-
-        &.warning {
-          background: #fff3e0;
-          color: #ff9800;
-        }
-
-        &.info {
-          background: #e1f5fe;
-          color: #00bcd4;
-        }
-      }
-
-      .stat-content {
-        .stat-number {
-          font-size: 28px;
-          font-weight: 600;
-          color: #303133;
-          line-height: 1;
-        }
-
-        .stat-label {
-          font-size: 14px;
-          color: #909399;
-          margin-top: 4px;
-        }
-      }
-    }
-  }
-
-  .filter-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding: 16px 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    .filter-left {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .filter-right {
-      display: flex;
-      gap: 12px;
-    }
-  }
 
   .batch-actions {
     display: flex;
@@ -1031,22 +753,6 @@ onMounted(() => {
       flex-direction: column;
       align-items: flex-start;
       gap: 16px;
-    }
-
-    .filter-section {
-      flex-direction: column;
-      gap: 16px;
-      align-items: stretch;
-
-      .filter-left,
-      .filter-right {
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-    }
-
-    .stats-cards {
-      grid-template-columns: 1fr;
     }
 
     .batch-actions {

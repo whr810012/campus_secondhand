@@ -157,7 +157,6 @@
             </template>
           </el-table-column>
           
-          <el-table-column prop="views" label="浏览量" width="80" />
           
           <el-table-column prop="createdAt" label="发布时间" width="160">
             <template #default="{ row }">
@@ -260,7 +259,6 @@
             <el-descriptions-item label="卖家">{{ currentProduct.seller }}</el-descriptions-item>
             <el-descriptions-item label="交易方式">{{ currentProduct.tradeType }}</el-descriptions-item>
             <el-descriptions-item label="交易地点">{{ currentProduct.location || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="浏览量">{{ currentProduct.views }}</el-descriptions-item>
             <el-descriptions-item label="收藏数">{{ currentProduct.favorites || 0 }}</el-descriptions-item>
             <el-descriptions-item label="发布时间">{{ formatDate(currentProduct.createdAt) }}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{ formatDate(currentProduct.updatedAt) }}</el-descriptions-item>

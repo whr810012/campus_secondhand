@@ -35,8 +35,6 @@ const AdminProducts = () => import('@/views/admin/Products.vue')
 const AdminOrders = () => import('@/views/admin/Orders.vue')
 const AdminCategories = () => import('@/views/admin/Categories.vue')
 const AdminAnnouncements = () => import('@/views/admin/Announcements.vue')
-const AdminLogs = () => import('@/views/admin/Logs.vue')
-const AdminAudit = () => import('@/views/admin/Audit.vue')
 
 const routes = [
   {
@@ -202,18 +200,6 @@ const routes = [
         name: 'AdminAnnouncements',
         component: AdminAnnouncements,
         meta: { title: '公告管理' }
-      },
-      {
-        path: 'audit',
-        name: 'AdminAudit',
-        component: AdminAudit,
-        meta: { title: '内容审核' }
-      },
-      {
-        path: 'logs',
-        name: 'AdminLogs',
-        component: AdminLogs,
-        meta: { title: '操作日志' }
       }
     ]
   }

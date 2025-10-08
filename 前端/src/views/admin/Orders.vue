@@ -6,129 +6,11 @@
         <h1 class="page-title">订单管理</h1>
         <p class="page-description">管理平台所有订单信息，包括订单状态跟踪、退款处理等操作</p>
       </div>
-      <div class="header-actions">
-        <el-button type="primary" @click="exportOrders">
-          <el-icon><Download /></el-icon>
-          导出数据
-        </el-button>
-      </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-row :gutter="20">
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon total">
-              <el-icon><Document /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ stats.total }}</div>
-              <div class="stat-label">总订单数</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon pending">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ stats.pending }}</div>
-              <div class="stat-label">待付款</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon processing">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ stats.processing }}</div>
-              <div class="stat-label">处理中</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon completed">
-              <el-icon><Check /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ stats.completed }}</div>
-              <div class="stat-label">已完成</div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
 
-    <!-- 筛选和搜索 -->
-    <div class="filter-section">
-      <el-card>
-        <el-form :model="filters" inline>
-          <el-form-item label="订单号">
-            <el-input
-              v-model="filters.orderNo"
-              placeholder="请输入订单号"
-              clearable
-              style="width: 200px"
-            />
-          </el-form-item>
-          <el-form-item label="订单状态">
-            <el-select v-model="filters.status" placeholder="请选择状态" clearable style="width: 150px">
-              <el-option label="全部" value="" />
-              <el-option label="待付款" value="pending" />
-              <el-option label="已付款" value="paid" />
-              <el-option label="已发货" value="shipped" />
-              <el-option label="已完成" value="completed" />
-              <el-option label="已取消" value="cancelled" />
-              <el-option label="退款中" value="refunding" />
-              <el-option label="已退款" value="refunded" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="买家姓名">
-            <el-input
-              v-model="filters.buyerName"
-              placeholder="请输入买家姓名"
-              clearable
-              style="width: 150px"
-            />
-          </el-form-item>
-          <el-form-item label="卖家姓名">
-            <el-input
-              v-model="filters.sellerName"
-              placeholder="请输入卖家姓名"
-              clearable
-              style="width: 150px"
-            />
-          </el-form-item>
-          <el-form-item label="创建时间">
-            <el-date-picker
-              v-model="filters.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-              style="width: 240px"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="searchOrders">
-              <el-icon><Search /></el-icon>
-              搜索
-            </el-button>
-            <el-button @click="resetFilters">
-              <el-icon><Refresh /></el-icon>
-              重置
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </el-card>
-    </div>
+
+
 
     <!-- 批量操作 -->
     <div class="batch-actions" v-if="selectedOrders.length > 0">
@@ -163,7 +45,7 @@
               <div class="order-info">
                 <div class="order-no">订单号：{{ row.orderNo }}</div>
                 <div class="order-time">{{ formatDate(row.createdAt) }}</div>
-                <div class="order-amount">¥{{ row.totalAmount }}</div>
+                <div class="order-amount">¥{{ row.amount }}</div>
               </div>
             </template>
           </el-table-column>
@@ -171,14 +53,14 @@
             <template #default="{ row }">
               <div class="product-info">
                 <el-image
-                  :src="row.product.image"
+                  :src="getProductImage(row.product)"
                   class="product-image"
                   fit="cover"
                 />
                 <div class="product-details">
-                  <div class="product-name">{{ row.product.name }}</div>
+                  <div class="product-name">{{ row.product.title }}</div>
                   <div class="product-price">¥{{ row.product.price }}</div>
-                  <div class="product-quantity">数量：{{ row.quantity }}</div>
+                  <div class="product-quantity">数量：1</div>
                 </div>
               </div>
             </template>
@@ -186,18 +68,18 @@
           <el-table-column label="买家信息" width="150">
             <template #default="{ row }">
               <div class="user-info">
-                <div class="user-name">{{ row.buyer.name }}</div>
-                <div class="user-contact">{{ row.buyer.phone }}</div>
-                <div class="user-id">{{ row.buyer.studentId }}</div>
+                <div class="user-name">买家ID: {{ row.buyerId }}</div>
+                <div class="user-contact">-</div>
+                <div class="user-id">-</div>
               </div>
             </template>
           </el-table-column>
           <el-table-column label="卖家信息" width="150">
             <template #default="{ row }">
               <div class="user-info">
-                <div class="user-name">{{ row.seller.name }}</div>
-                <div class="user-contact">{{ row.seller.phone }}</div>
-                <div class="user-id">{{ row.seller.studentId }}</div>
+                <div class="user-name">卖家ID: {{ row.sellerId }}</div>
+                <div class="user-contact">-</div>
+                <div class="user-id">-</div>
               </div>
             </template>
           </el-table-column>
@@ -213,7 +95,7 @@
           </el-table-column>
           <el-table-column label="交易地点" width="120">
             <template #default="{ row }">
-              <span>{{ row.meetingLocation || '-' }}</span>
+              <span>{{ row.tradeLocation || '-' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="200" fixed="right">
@@ -304,11 +186,11 @@
                 </div>
                 <div class="info-item">
                   <span class="label">交易地点：</span>
-                  <span class="value">{{ selectedOrder.meetingLocation || '-' }}</span>
+                  <span class="value">{{ selectedOrder.tradeLocation || '-' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">订单金额：</span>
-                  <span class="value amount">¥{{ selectedOrder.totalAmount }}</span>
+                  <span class="value amount">¥{{ selectedOrder.amount }}</span>
                 </div>
               </div>
             </div>
@@ -318,15 +200,15 @@
               <h4>商品信息</h4>
               <div class="product-detail">
                 <el-image
-                  :src="selectedOrder.product.image"
+                  :src="getProductImage(selectedOrder.product)"
                   class="product-image-large"
                   fit="cover"
                 />
                 <div class="product-info-detail">
-                  <div class="product-name">{{ selectedOrder.product.name }}</div>
+                  <div class="product-name">{{ selectedOrder.product.title }}</div>
                   <div class="product-desc">{{ selectedOrder.product.description }}</div>
                   <div class="product-price">单价：¥{{ selectedOrder.product.price }}</div>
-                  <div class="product-quantity">数量：{{ selectedOrder.quantity }}</div>
+                  <div class="product-quantity">数量：1</div>
                 </div>
               </div>
             </div>
@@ -339,20 +221,20 @@
               <h4>买家信息</h4>
               <div class="info-grid">
                 <div class="info-item">
-                  <span class="label">姓名：</span>
-                  <span class="value">{{ selectedOrder.buyer.name }}</span>
+                  <span class="label">买家ID：</span>
+                  <span class="value">{{ selectedOrder.buyerId }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">学号：</span>
-                  <span class="value">{{ selectedOrder.buyer.studentId }}</span>
+                  <span class="value">-</span>
                 </div>
                 <div class="info-item">
                   <span class="label">联系电话：</span>
-                  <span class="value">{{ selectedOrder.buyer.phone }}</span>
+                  <span class="value">-</span>
                 </div>
                 <div class="info-item">
                   <span class="label">学院：</span>
-                  <span class="value">{{ selectedOrder.buyer.college }}</span>
+                  <span class="value">-</span>
                 </div>
               </div>
             </div>
@@ -362,20 +244,20 @@
               <h4>卖家信息</h4>
               <div class="info-grid">
                 <div class="info-item">
-                  <span class="label">姓名：</span>
-                  <span class="value">{{ selectedOrder.seller.name }}</span>
+                  <span class="label">卖家ID：</span>
+                  <span class="value">{{ selectedOrder.sellerId }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">学号：</span>
-                  <span class="value">{{ selectedOrder.seller.studentId }}</span>
+                  <span class="value">-</span>
                 </div>
                 <div class="info-item">
                   <span class="label">联系电话：</span>
-                  <span class="value">{{ selectedOrder.seller.phone }}</span>
+                  <span class="value">-</span>
                 </div>
                 <div class="info-item">
                   <span class="label">学院：</span>
-                  <span class="value">{{ selectedOrder.seller.college }}</span>
+                  <span class="value">-</span>
                 </div>
               </div>
             </div>
@@ -422,14 +304,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Download,
-  Search,
-  Refresh,
-  Document,
-  Clock,
-  Check
-} from '@element-plus/icons-vue'
+import { getAllOrders, cancelOrder as cancelOrderApi, requestRefund, deleteOrder as deleteOrderApi } from '@/api/order'
 
 // 响应式数据
 const loading = ref(false)
@@ -437,23 +312,6 @@ const orders = ref([])
 const selectedOrders = ref([])
 const orderDetailVisible = ref(false)
 const selectedOrder = ref(null)
-
-// 统计数据
-const stats = reactive({
-  total: 0,
-  pending: 0,
-  processing: 0,
-  completed: 0
-})
-
-// 筛选条件
-const filters = reactive({
-  orderNo: '',
-  status: '',
-  buyerName: '',
-  sellerName: '',
-  dateRange: []
-})
 
 // 分页数据
 const pagination = reactive({
@@ -519,152 +377,40 @@ const formatDateTime = (date) => {
 const fetchOrders = async () => {
   loading.value = true
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const params = {
+      page: pagination.page,
+      size: pagination.size
+    }
     
-    // 模拟数据
-    const mockOrders = [
-      {
-        id: 1,
-        orderNo: 'ORD202401150001',
-        status: 'paid',
-        totalAmount: 6800,
-        quantity: 1,
-        paymentMethod: 'wechat',
-        meetingLocation: '图书馆门口',
-        createdAt: '2024-01-15T10:30:00Z',
-        product: {
-          id: 1,
-          name: 'iPhone 13 Pro',
-          description: '9成新，无磕碰，功能正常',
-          price: 6800,
-          image: '/api/placeholder/300/300'
-        },
-        buyer: {
-          id: 1,
-          name: '张三',
-          studentId: '2021001',
-          phone: '138****1234',
-          college: '计算机学院'
-        },
-        seller: {
-          id: 2,
-          name: '李四',
-          studentId: '2021002',
-          phone: '139****5678',
-          college: '电子工程学院'
-        },
-        timeline: [
-          {
-            id: 1,
-            time: '2024-01-15T10:30:00Z',
-            description: '订单创建',
-            type: 'primary'
-          },
-          {
-            id: 2,
-            time: '2024-01-15T10:35:00Z',
-            description: '买家付款成功',
-            type: 'success'
-          }
-        ]
-      },
-      {
-        id: 2,
-        orderNo: 'ORD202401140001',
-        status: 'completed',
-        totalAmount: 45,
-        quantity: 1,
-        paymentMethod: 'cash',
-        meetingLocation: '宿舍楼下',
-        createdAt: '2024-01-14T15:20:00Z',
-        product: {
-          id: 2,
-          name: '高等数学教材',
-          description: '同济版高等数学上下册',
-          price: 45,
-          image: '/api/placeholder/300/300'
-        },
-        buyer: {
-          id: 3,
-          name: '王五',
-          studentId: '2021003',
-          phone: '137****9012',
-          college: '数学学院'
-        },
-        seller: {
-          id: 4,
-          name: '赵六',
-          studentId: '2021004',
-          phone: '136****3456',
-          college: '物理学院'
-        },
-        timeline: [
-          {
-            id: 1,
-            time: '2024-01-14T15:20:00Z',
-            description: '订单创建',
-            type: 'primary'
-          },
-          {
-            id: 2,
-            time: '2024-01-14T15:25:00Z',
-            description: '买家付款成功',
-            type: 'success'
-          },
-          {
-            id: 3,
-            time: '2024-01-14T16:00:00Z',
-            description: '卖家发货',
-            type: 'info'
-          },
-          {
-            id: 4,
-            time: '2024-01-14T16:30:00Z',
-            description: '交易完成',
-            type: 'success'
-          }
-        ]
-      }
-    ]
+    const response = await getAllOrders(params)
+    console.log('API响应数据:', response)
     
-    orders.value = mockOrders
-    pagination.total = mockOrders.length
-    
-    // 更新统计数据
-    updateStats()
+    // 根据实际API响应结构处理数据
+    if (response.data && response.data.records) {
+      orders.value = response.data.records
+      pagination.total = response.data.total || 0
+      console.log('处理后的订单数据:', orders.value)
+      console.log('总数:', pagination.total)
+    } else if (response.message === '操作成功' && response.data) {
+      // 兼容没有code字段但有message的情况
+      orders.value = response.data.records || []
+      pagination.total = response.data.total || 0
+      console.log('处理后的订单数据:', orders.value)
+      console.log('总数:', pagination.total)
+    } else {
+      ElMessage.error(response.message || '获取订单列表失败')
+    }
   } catch (error) {
+    console.error('获取订单列表失败:', error)
     ElMessage.error('获取订单列表失败')
   } finally {
     loading.value = false
   }
 }
 
-// 更新统计数据
-const updateStats = () => {
-  stats.total = orders.value.length
-  stats.pending = orders.value.filter(o => o.status === 'pending').length
-  stats.processing = orders.value.filter(o => ['paid', 'shipped'].includes(o.status)).length
-  stats.completed = orders.value.filter(o => o.status === 'completed').length
-}
 
-// 搜索订单
-const searchOrders = () => {
-  pagination.page = 1
-  fetchOrders()
-}
 
-// 重置筛选条件
-const resetFilters = () => {
-  Object.keys(filters).forEach(key => {
-    if (key === 'dateRange') {
-      filters[key] = []
-    } else {
-      filters[key] = ''
-    }
-  })
-  searchOrders()
-}
+
 
 // 处理选择变化
 const handleSelectionChange = (selection) => {
@@ -704,19 +450,22 @@ const cancelOrder = async (order) => {
       inputErrorMessage: '请输入取消原因'
     })
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await cancelOrderApi(order.id, { reason })
     
-    order.status = 'cancelled'
-    order.cancelReason = reason
-    ElMessage.success('订单取消成功')
-    updateStats()
-    
-    if (orderDetailVisible.value) {
-      closeOrderDetail()
+    if (response.code === 200) {
+      ElMessage.success('订单取消成功')
+      // 重新获取订单列表
+      fetchOrders()
+      
+      if (orderDetailVisible.value) {
+        closeOrderDetail()
+      }
+    } else {
+      ElMessage.error(response.message || '订单取消失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('订单取消失败:', error)
       ElMessage.error('订单取消失败')
     }
   }
@@ -732,19 +481,22 @@ const refundOrder = async (order) => {
       inputErrorMessage: '请输入退款原因'
     })
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = await requestRefund(order.id, { reason })
     
-    order.status = 'refunded'
-    order.refundReason = reason
-    ElMessage.success('退款处理成功')
-    updateStats()
-    
-    if (orderDetailVisible.value) {
-      closeOrderDetail()
+    if (response.code === 200) {
+      ElMessage.success('退款处理成功')
+      // 重新获取订单列表
+      fetchOrders()
+      
+      if (orderDetailVisible.value) {
+        closeOrderDetail()
+      }
+    } else {
+      ElMessage.error(response.message || '退款处理失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('退款处理失败:', error)
       ElMessage.error('退款处理失败')
     }
   }
@@ -757,14 +509,16 @@ const completeOrder = async (order) => {
       type: 'warning'
     })
     
-    // 模拟API调用
+    // TODO: 等待后端提供完成订单的API接口
+    // 暂时使用模拟API调用
     await new Promise(resolve => setTimeout(resolve, 500))
     
-    order.status = 'completed'
     ElMessage.success('订单完成成功')
-    updateStats()
+    // 重新获取订单列表以确保数据同步
+    fetchOrders()
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('订单完成失败:', error)
       ElMessage.error('订单完成失败')
     }
   }
@@ -777,18 +531,18 @@ const deleteOrder = async (order) => {
       type: 'error'
     })
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await deleteOrderApi(order.id)
     
-    const index = orders.value.findIndex(o => o.id === order.id)
-    if (index > -1) {
-      orders.value.splice(index, 1)
+    if (response.code === 200 || response.message === '操作成功') {
+      ElMessage.success('删除成功')
+      // 重新获取订单列表以确保数据同步
+      fetchOrders()
+    } else {
+      ElMessage.error(response.message || '删除失败')
     }
-    
-    ElMessage.success('删除成功')
-    updateStats()
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('删除失败:', error)
       ElMessage.error('删除失败')
     }
   }
@@ -804,21 +558,20 @@ const batchCancel = async () => {
       inputErrorMessage: '请输入取消原因'
     })
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 批量取消订单
+    const promises = selectedOrders.value
+      .filter(order => order.status === 'pending')
+      .map(order => cancelOrderApi(order.id, { reason }))
     
-    selectedOrders.value.forEach(order => {
-      if (order.status === 'pending') {
-        order.status = 'cancelled'
-        order.cancelReason = reason
-      }
-    })
+    await Promise.all(promises)
     
     ElMessage.success('批量取消成功')
     selectedOrders.value = []
-    updateStats()
+    // 重新获取订单列表
+    fetchOrders()
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('批量取消失败:', error)
       ElMessage.error('批量取消失败')
     }
   }
@@ -833,21 +586,20 @@ const batchRefund = async () => {
       inputErrorMessage: '请输入退款原因'
     })
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 批量退款处理
+    const promises = selectedOrders.value
+      .filter(order => ['paid', 'shipped'].includes(order.status))
+      .map(order => requestRefund(order.id, { reason }))
     
-    selectedOrders.value.forEach(order => {
-      if (['paid', 'shipped'].includes(order.status)) {
-        order.status = 'refunded'
-        order.refundReason = reason
-      }
-    })
+    await Promise.all(promises)
     
     ElMessage.success('批量退款成功')
     selectedOrders.value = []
-    updateStats()
+    // 重新获取订单列表
+    fetchOrders()
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('批量退款失败:', error)
       ElMessage.error('批量退款失败')
     }
   }
@@ -861,33 +613,20 @@ const batchDelete = async () => {
       { type: 'error' }
     )
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 批量删除订单
+    const promises = selectedOrders.value.map(order => deleteOrderApi(order.id))
     
-    const idsToDelete = selectedOrders.value.map(o => o.id)
-    orders.value = orders.value.filter(o => !idsToDelete.includes(o.id))
+    await Promise.all(promises)
     
     ElMessage.success('批量删除成功')
     selectedOrders.value = []
-    updateStats()
+    // 重新获取订单列表
+    fetchOrders()
   } catch (error) {
     if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
       ElMessage.error('批量删除失败')
     }
-  }
-}
-
-// 导出数据
-const exportOrders = async () => {
-  try {
-    ElMessage.info('正在导出数据...')
-    
-    // 模拟导出
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    ElMessage.success('数据导出成功')
-  } catch (error) {
-    ElMessage.error('数据导出失败')
   }
 }
 
@@ -895,6 +634,28 @@ const exportOrders = async () => {
 onMounted(() => {
   fetchOrders()
 })
+
+// 工具函数
+const getProductImage = (product) => {
+  if (!product) return 'https://via.placeholder.com/300x200/f5f5f5/cccccc?text=暂无图片'
+  
+  // 处理imageList数组
+  if (product.imageList && product.imageList.length > 0) {
+    return product.imageList[0]
+  }
+  
+  // 处理images数组
+  if (product.images && product.images.length > 0) {
+    return product.images[0]
+  }
+  
+  // 处理单个image字段
+  if (product.image) {
+    return product.image
+  }
+  
+  return 'https://via.placeholder.com/300x200/f5f5f5/cccccc?text=暂无图片'
+}
 </script>
 
 <style lang="scss" scoped>

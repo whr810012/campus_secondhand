@@ -32,7 +32,7 @@ request.interceptors.response.use(
     
     // 请求成功
     if (code === 200 || code === 0) {
-      return { data, message }
+      return { code, data, message }
     }
     
     // 业务错误
